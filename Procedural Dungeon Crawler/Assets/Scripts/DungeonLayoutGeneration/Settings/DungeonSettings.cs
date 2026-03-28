@@ -53,18 +53,10 @@ namespace DungeonLayoutGeneration.Settings
         [FoldoutGroup("Tiles")] 
         [SerializeField]
         private TileBase floorTile;
-        
-        [FoldoutGroup("Tiles")] 
+
+        [FoldoutGroup("Tiles")]
         [SerializeField]
-        private TileBase topWallTile;
-        
-        [FoldoutGroup("Tiles")] 
-        [SerializeField]
-        private TileBase sideTile;
-        
-        [FoldoutGroup("Tiles")] 
-        [SerializeField]
-        private TileBase bottomWallTile;
+        private TileBase wallTile;
         
         
         
@@ -81,8 +73,6 @@ namespace DungeonLayoutGeneration.Settings
         public int MinDistance => minDistance;
         public int MaxDistance => maxDistance;
         public TileBase FloorTile => floorTile;
-        public TileBase TopWallTile => topWallTile;
-        public TileBase SideWallTile => sideTile;
-        public TileBase BottomWallTile => bottomWallTile;
+        public TileBase WallTile => wallTile;
     }
 }
