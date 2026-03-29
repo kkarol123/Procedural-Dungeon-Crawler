@@ -169,8 +169,8 @@ TextureImporter:
       name: tileset_3
       rect:
         serializedVersion: 2
-        x: 210
-        y: 692
+        x: 211
+        y: 691
         width: 70
         height: 76
       alignment: 0
@@ -191,9 +191,9 @@ TextureImporter:
       name: tileset_4
       rect:
         serializedVersion: 2
-        x: 280
-        y: 692
-        width: 70
+        x: 281
+        y: 690
+        width: 69
         height: 76
       alignment: 0
       pivot: {x: 0.5, y: 0.5}
@@ -544,7 +544,7 @@ TextureImporter:
       rect:
         serializedVersion: 2
         x: 0
-        y: 616
+        y: 613
         width: 70
         height: 76
       alignment: 0
@@ -566,7 +566,7 @@ TextureImporter:
       rect:
         serializedVersion: 2
         x: 70
-        y: 616
+        y: 613
         width: 70
         height: 76
       alignment: 0
@@ -719,10 +719,10 @@ TextureImporter:
       name: tileset_28
       rect:
         serializedVersion: 2
-        x: 560
-        y: 616
-        width: 70
-        height: 76
+        x: 565
+        y: 613
+        width: 67
+        height: 74
       alignment: 0
       pivot: {x: 0.5, y: 0.5}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -741,10 +741,10 @@ TextureImporter:
       name: tileset_29
       rect:
         serializedVersion: 2
-        x: 630
-        y: 616
-        width: 70
-        height: 76
+        x: 635
+        y: 613
+        width: 68
+        height: 74
       alignment: 0
       pivot: {x: 0.5, y: 0.5}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -3623,10 +3623,10 @@ TextureImporter:
       name: tileset_160
       rect:
         serializedVersion: 2
-        x: 0
-        y: 84
-        width: 70
-        height: 76
+        x: 2
+        y: 78
+        width: 67
+        height: 74
       alignment: 0
       pivot: {x: 0.5, y: 0.5}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -3645,10 +3645,10 @@ TextureImporter:
       name: tileset_161
       rect:
         serializedVersion: 2
-        x: 70
-        y: 84
-        width: 70
-        height: 76
+        x: 72
+        y: 78
+        width: 67
+        height: 74
       alignment: 0
       pivot: {x: 0.5, y: 0.5}
       border: {x: 0, y: 0, z: 0, w: 0}

@@ -13,6 +13,14 @@ namespace DungeonLayoutGeneration.Generator
         Cross
     }
 
+    public enum BiomeType
+    {
+        Ruined,
+        Flooded,
+        Volcanic
+    }
+    
+
     [System.Serializable]
     public class RoomData
     {
@@ -20,13 +28,15 @@ namespace DungeonLayoutGeneration.Generator
         public int width;
         public int height;
         public RoomType type;
+        public BiomeType biome;
 
-        public RoomData(Vector3Int center, int width, int height, RoomType type)
+        public RoomData(Vector3Int center, int width, int height, RoomType type, BiomeType biome)
         {
             this.center = center;
             this.width = width;
             this.height = height;
             this.type = type;
+            this.biome = biome;
         }
     }
     
@@ -50,19 +60,22 @@ namespace DungeonLayoutGeneration.Generator
             doorsTilemap.ClearAllTiles();
             rooms.Clear(); 
             
-            //1. Initialize Random/Seed
+            //1. Initialize Random/Seed 
             System.Random rng = new System.Random(dungeonSettings.Seed);
             
-            //2. Generate Rooms
+            //2. Generate Rooms              
             GenerateRooms(rng);
             
-            //3. Generate Start and End Room
+            //3. Generate Start and End Room  
             GenerateStartRoom();
             GenerateEndRoom();
             
             //4. Add Corridors
             GenerateCorridorFloors();
             GenerateCorridorWalls();
+            
+            //5. Add Floor Variation
+            ApplyFloorVariation();
         }
         
 
@@ -76,9 +89,15 @@ namespace DungeonLayoutGeneration.Generator
             
             numberOfRooms = rng.Next(dungeonSettings.MinRooms, dungeonSettings.MaxRooms + 1);
             distance = rng.Next(dungeonSettings.MinDistance, dungeonSettings.MaxDistance + 1);
-            
-            for (int i = 0; i < numberOfRooms; i++)
+
+            int roomsCreated = 0;
+            int attempts = 0;
+            int maxAttempts = numberOfRooms * 20;
+
+            while (roomsCreated < numberOfRooms && attempts < maxAttempts)
             {
+                attempts++;
+            
                 RoomType roomType = (RoomType)rng.Next(0, 3); //0 is a rectangle, 1 is a circle, 2 is a UShaped room
 
                 int width = rng.Next(dungeonSettings.MinWidth, dungeonSettings.MaxWidth + 1);
@@ -98,28 +117,26 @@ namespace DungeonLayoutGeneration.Generator
                         case RoomType.Cross:
                             DrawCrossRoom(currentPos, width, height);
                             break;
-                    }    
-                    
-                    rooms.Add(new RoomData(currentPos, width, height, roomType));
-                }
-                else
-                {
-                    i--;  //try drawing room again
-                }
-                
-                
-                int direction = rng.Next(0, 3);
-                switch (direction)
-                {
-                    case 0: //right
-                        currentPos += new Vector3Int(width + distance, 0, 0);
-                        break;
-                    case 1: //up
-                        currentPos += new Vector3Int(0, height + distance, 0);
-                        break;
-                    case 2:
-                        currentPos += new Vector3Int(0, -(height + distance), 0);
-                        break;
+                    }
+
+                    BiomeType biome = GetBiomeForRoomIndex(roomsCreated, numberOfRooms);
+
+                    rooms.Add(new RoomData(currentPos, width, height, roomType, biome));
+                    roomsCreated++;
+
+                    int direction = rng.Next(0, 3);
+                    switch (direction)
+                    {
+                        case 0: //right
+                            currentPos += new Vector3Int(width + distance, 0, 0);
+                            break;
+                        case 1: //up
+                            currentPos += new Vector3Int(0, height + distance, 0);
+                            break;
+                        case 2:
+                            currentPos += new Vector3Int(0, -(height + distance), 0);
+                            break;
+                    }
                 }
             }
         }
@@ -145,6 +162,8 @@ namespace DungeonLayoutGeneration.Generator
             return false;
         }
 
+        
+        
         private void DrawRectangleRoom(Vector3Int center, int width, int height)
         {
             int startX = center.x - width / 2;
@@ -163,7 +182,7 @@ namespace DungeonLayoutGeneration.Generator
                     }
                     else
                     {
-                        terrainTilemap.SetTile(tilePos, dungeonSettings.FloorTile);
+                        terrainTilemap.SetTile(tilePos, dungeonSettings.DryStoneTile);
                     }
                 }
             }
@@ -191,7 +210,7 @@ namespace DungeonLayoutGeneration.Generator
                     
                     if (distanceFromCenter <= 1f)
                     {
-                        float wallThreshold = 0.625f;
+                        float wallThreshold = 0.65f;
 
                         if (distanceFromCenter >= wallThreshold)
                         {
@@ -199,7 +218,7 @@ namespace DungeonLayoutGeneration.Generator
                         }
                         else
                         {
-                            terrainTilemap.SetTile(tilePos, dungeonSettings.FloorTile);
+                            terrainTilemap.SetTile(tilePos, dungeonSettings.DryStoneTile);
                         }
                     }
                 }
@@ -250,12 +269,14 @@ namespace DungeonLayoutGeneration.Generator
                     }
                     else
                     {
-                        terrainTilemap.SetTile(tilePos, dungeonSettings.FloorTile);
+                        terrainTilemap.SetTile(tilePos, dungeonSettings.DryStoneTile);
                     }
                 }
             }
         }
 
+        
+        
         private void GenerateStartRoom()
         {
             RoomData firstRoom = rooms[0];
@@ -263,11 +284,11 @@ namespace DungeonLayoutGeneration.Generator
             int startRoomWidth = 9;
             int startRoomHeight = 7;
             
-            Vector3Int startRoomCenter = new Vector3Int(firstRoom.center.x - firstRoom.width / 2 - firstRoom.center.y - 14, firstRoom.center.y, 0);
+            Vector3Int startRoomCenter = new Vector3Int(firstRoom.center.x - firstRoom.width / 2 - startRoomWidth / 2 - 10, firstRoom.center.y, 0);
             
             DrawRectangleRoom(startRoomCenter, startRoomWidth, startRoomHeight);
 
-            rooms.Insert(0, new RoomData(startRoomCenter, startRoomWidth, startRoomHeight, RoomType.Rectangle));
+            rooms.Insert(0, new RoomData(startRoomCenter, startRoomWidth, startRoomHeight, RoomType.Rectangle, BiomeType.Ruined));
         }
 
         private void GenerateEndRoom()
@@ -281,7 +302,7 @@ namespace DungeonLayoutGeneration.Generator
             
             DrawRectangleRoom(endRoomCenter, endRoomWidth, endRoomHeight);
             
-            rooms.Insert(rooms.Count, new RoomData(endRoomCenter, endRoomWidth, endRoomHeight, RoomType.Rectangle));
+            rooms.Insert(rooms.Count, new RoomData(endRoomCenter, endRoomWidth, endRoomHeight, RoomType.Rectangle, BiomeType.Volcanic));
         }
         
         
@@ -301,10 +322,11 @@ namespace DungeonLayoutGeneration.Generator
                 DrawHorizontalCorridor(start.y, start.x, end.x);
                 DrawVerticalCorridor(end.x, start.y, end.y);
                 
-                PlaceLockedDoor(start, end);
+                PlaceLockedDoor(rooms[i], rooms[i + 1]);
             } 
         }
 
+        
         private void DrawHorizontalCorridor(int y, int startX, int endX)
         {
             for (int x = Mathf.Min(startX, endX); x <= Mathf.Max(startX, endX); x++)
@@ -312,7 +334,7 @@ namespace DungeonLayoutGeneration.Generator
                 for (int offset = -1; offset <= 1; offset++)
                 {
                     Vector3Int floorPos = new Vector3Int(x, y + offset, 0); 
-                    terrainTilemap.SetTile(floorPos, dungeonSettings.FloorTile);
+                    terrainTilemap.SetTile(floorPos, dungeonSettings.DryStoneTile);
                 } 
             }
         }
@@ -324,10 +346,11 @@ namespace DungeonLayoutGeneration.Generator
                 for (int offset = -1; offset <= 1; offset++)
                 {
                     Vector3Int floorPos = new Vector3Int(x + offset, y, 0);
-                    terrainTilemap.SetTile(floorPos, dungeonSettings.FloorTile);
+                    terrainTilemap.SetTile(floorPos, dungeonSettings.DryStoneTile);
                 } 
             }
         }
+        
         
         private void GenerateCorridorWalls()
         {
@@ -346,10 +369,10 @@ namespace DungeonLayoutGeneration.Generator
                     }
 
                     bool hasFloorNeighbour =
-                        terrainTilemap.GetTile(new Vector3Int(x + 1, y, 0)) == dungeonSettings.FloorTile ||
-                        terrainTilemap.GetTile(new Vector3Int(x - 1, y, 0)) == dungeonSettings.FloorTile ||
-                        terrainTilemap.GetTile(new Vector3Int(x, y + 1, 0)) == dungeonSettings.FloorTile ||
-                        terrainTilemap.GetTile(new Vector3Int(x, y - 1, 0)) == dungeonSettings.FloorTile;
+                        terrainTilemap.GetTile(new Vector3Int(x + 1, y, 0)) == dungeonSettings.DryStoneTile ||
+                        terrainTilemap.GetTile(new Vector3Int(x - 1, y, 0)) == dungeonSettings.DryStoneTile ||
+                        terrainTilemap.GetTile(new Vector3Int(x, y + 1, 0)) == dungeonSettings.DryStoneTile ||
+                        terrainTilemap.GetTile(new Vector3Int(x, y - 1, 0)) == dungeonSettings.DryStoneTile;
 
                     if (hasFloorNeighbour)
                     {
@@ -358,16 +381,27 @@ namespace DungeonLayoutGeneration.Generator
                 }
             }
         }
+        
 
-        private void PlaceLockedDoor(Vector3Int start, Vector3Int end)
+        private void PlaceLockedDoor(RoomData startRoom, RoomData endRoom)
         {
-            int horizontalLength = Mathf.Abs(end.x - start.x);   //use absolute to avoid negative numbers
-            int verticalLength = Mathf.Abs(end.y - start.y);
+            int changeX = endRoom.center.x - startRoom.center.x;
+            int changeY = endRoom.center.y - startRoom.center.y;
 
-            if (horizontalLength >= verticalLength)
+            if (changeX != 0)
             {
-                int doorX = (start.x + end.x) / 2;
-                int doorY = start.y;
+                int directionX;
+                if (changeX > 0)
+                {
+                    directionX = 1;
+                }
+                else
+                {
+                    directionX = -1;
+                }
+                
+                int doorX = (startRoom.center.x + directionX * (startRoom.width / 2));
+                int doorY = startRoom.center.y;
                 
                 terrainTilemap.SetTile(new Vector3Int(doorX, doorY - 2, 0), dungeonSettings.WallTile);
                 terrainTilemap.SetTile(new Vector3Int(doorX, doorY - 1, 0), dungeonSettings.WallTile);
@@ -377,8 +411,19 @@ namespace DungeonLayoutGeneration.Generator
             }
             else
             {
-                int doorX = end.x;
-                int doorY = (start.y + end.y) / 2;
+                int directionY;
+
+                if (changeY > 0)
+                {
+                    directionY = 1;
+                }
+                else
+                {
+                    directionY = -1;
+                }
+
+                int doorX = startRoom.center.x;
+                int doorY = startRoom.center.y + directionY * (startRoom.height / 2);
                 
                 terrainTilemap.SetTile(new Vector3Int(doorX - 2, doorY, 0), dungeonSettings.WallTile);
                 terrainTilemap.SetTile(new Vector3Int(doorX - 1, doorY, 0), dungeonSettings.WallTile);
@@ -390,7 +435,157 @@ namespace DungeonLayoutGeneration.Generator
         
         
         
-        //Reset button functions
+        
+        
+        //Environmental Variation Functions
+        private void ApplyFloorVariation()
+        {
+            BoundsInt bounds = terrainTilemap.cellBounds;
+
+            float offsetX = dungeonSettings.Seed * 0.67f;
+            float offsetY = dungeonSettings.Seed * 0.69f;
+
+            for (int x = bounds.xMin; x < bounds.xMax; x++)
+            {
+                for (int y = bounds.yMin; y < bounds.yMax; y++)
+                {
+                    Vector3Int pos = new Vector3Int(x, y, 0);
+                    TileBase currentTile = terrainTilemap.GetTile(pos);
+
+                    if (currentTile == dungeonSettings.DryStoneTile)
+                    {
+                        RoomData room = GetRoomAtPosition(pos);
+
+                        if (room == null) //if room is a corridor
+                        {
+                            room = GetNearestRoomToPosition(pos);
+                        }
+                        if (room != null) //if a room is found
+                        {
+                            TileBase variedTile = GetFloorVariationTile(pos, room.biome, offsetX, offsetY);
+                            terrainTilemap.SetTile(pos, variedTile);
+                        }
+                    }
+                }
+            }
+        }
+        
+        private TileBase GetFloorVariationTile(Vector3Int pos, BiomeType biome, float offsetX, float offsetY)
+        {
+            float sampleX = pos.x * dungeonSettings.NoiseScale + offsetX;
+            float sampleY = pos.y * dungeonSettings.NoiseScale + offsetY;
+
+            float noiseValue = Mathf.PerlinNoise(sampleX, sampleY);
+
+            if (biome == BiomeType.Ruined)
+            {
+                if (noiseValue < 0.4f)
+                {
+                    return dungeonSettings.DryStoneTile;
+                }
+                if (noiseValue < 0.65f)
+                {
+                    return dungeonSettings.CrackedStoneTile;
+                }
+                
+                return dungeonSettings.MossyStoneTile;
+            }
+
+            if (biome == BiomeType.Flooded)
+            {
+                if (noiseValue < 0.25f)
+                {
+                    return dungeonSettings.DryStoneTile;
+                }
+                if (noiseValue < 0.45f)
+                {
+                    return dungeonSettings.MossyStoneTile;
+                }
+                if (noiseValue < 0.625f)
+                {
+                    return dungeonSettings.DampStoneTile;
+                }
+                
+                return dungeonSettings.PuddleTile;
+            }
+            
+            //Volcanic
+            if (noiseValue < 0.5f)
+            {
+                return dungeonSettings.CrackedStoneTile;
+            }
+            if (noiseValue < 0.70f)
+            {
+                return dungeonSettings.VolanicRubbleTile;
+            }
+
+            return dungeonSettings.LavaTile;
+        }
+
+        //Biomes
+        private BiomeType GetBiomeForRoomIndex(int roomIndex, int totalRooms)
+        {
+            float progress = (float) roomIndex / (totalRooms - 1);
+
+            if (progress < 0.30f)
+            {
+                return BiomeType.Ruined;
+            }
+
+            if (progress < 0.60f)
+            {
+                return BiomeType.Flooded;
+            }
+
+            return BiomeType.Volcanic;
+        }
+        
+        private RoomData GetRoomAtPosition(Vector3Int pos)
+        {
+            for (int i = 0; i < rooms.Count; i++)
+            {
+                RoomData room = rooms[i];
+                
+                int startX = room.center.x - room.width / 2;
+                int endX = startX + room.width - 1;
+                
+                int startY = room.center.y - room.height / 2;
+                int endY = startY + room.height - 1;
+
+                if (pos.x >= startX && pos.x <= endX && pos.y >= startY && pos.y <= endY)
+                {
+                    return room;
+                }
+            }
+
+            return null;
+        }
+
+        private RoomData GetNearestRoomToPosition(Vector3Int pos)
+        {
+            RoomData nearestRoom = rooms[0];
+            float shortestDistance = Vector3Int.Distance(pos, rooms[0].center);
+
+            for (int i = 1; i < rooms.Count; i++)
+            {
+                float distanceToRoom = Vector3Int.Distance(pos, rooms[i].center);
+
+                if (distanceToRoom < shortestDistance)
+                {
+                    shortestDistance = distanceToRoom;
+                    nearestRoom = rooms[i];
+                }
+            }
+            
+            return nearestRoom;
+        }
+        
+        
+        
+        
+        
+        
+        //Reset button function
         [Button("Reset Tilemaps")]
         public void ResetTerrain()
         {

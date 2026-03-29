@@ -13,6 +13,11 @@ namespace DungeonLayoutGeneration.Settings
         private int seed = 12345;
         public int Seed => seed;
         
+        [FoldoutGroup("Fixed Constraints")] 
+        [SerializeField]
+        private float noiseScale = 0.1f;
+        public float NoiseScale => noiseScale;
+        
         
         
         
@@ -20,7 +25,7 @@ namespace DungeonLayoutGeneration.Settings
         //Randomised Constraints
         [FoldoutGroup("Randomised Constraints")] 
         [SerializeField]
-        private int minRooms = 3;
+        private int minRooms = 2;
         public int MinRooms => minRooms;
 
         [FoldoutGroup("Randomised Constraints")] 
@@ -64,20 +69,57 @@ namespace DungeonLayoutGeneration.Settings
         
         
         //Tiles
-        [FoldoutGroup("Tiles")] 
-        [SerializeField]
-        private TileBase floorTile;
-        public TileBase FloorTile => floorTile;
-
         [FoldoutGroup("Tiles")]
         [SerializeField]
         private TileBase wallTile;
         public TileBase WallTile => wallTile;
-
-
+        
         [FoldoutGroup("Tiles")] 
         [SerializeField]
         private TileBase doorTile;
         public TileBase DoorTile => doorTile;
+        
+        
+        
+        [FoldoutGroup("Tiles/All Biome Tiles")] 
+        [SerializeField]
+        private TileBase dryStoneTile;
+        public TileBase DryStoneTile => dryStoneTile;
+        
+        [FoldoutGroup("Tiles/All Biome Tiles")] 
+        [SerializeField]
+        private TileBase crackedStoneTile;
+        public TileBase CrackedStoneTile => crackedStoneTile;
+        
+        [FoldoutGroup("Tiles/All Biome Tiles")] 
+        [SerializeField]
+        private TileBase mossyStoneTile;
+        public TileBase MossyStoneTile => mossyStoneTile;
+        
+        
+        
+        
+        [FoldoutGroup("Tiles/Flooded Biome Tiles")] 
+        [SerializeField]
+        private TileBase dampStoneTile;
+        public TileBase DampStoneTile => dampStoneTile;
+        
+        [FoldoutGroup("Tiles/Flooded Biome Tiles")] 
+        [SerializeField]
+        private TileBase puddleTile;
+        public TileBase PuddleTile => puddleTile;
+        
+        
+        
+        
+        [FoldoutGroup("Tiles/Volcanic Biome Tiles")] 
+        [SerializeField]
+        private TileBase volanicRubbleTile;
+        public TileBase VolanicRubbleTile => volanicRubbleTile;
+        
+        [FoldoutGroup("Tiles/Volcanic Biome Tiles")] 
+        [SerializeField]
+        private TileBase lavaTile;
+        public TileBase LavaTile => lavaTile;
     }
 }
