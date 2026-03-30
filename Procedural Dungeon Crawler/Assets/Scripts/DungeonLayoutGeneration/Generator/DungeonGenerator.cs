@@ -19,7 +19,7 @@ namespace DungeonLayoutGeneration.Generator
         Flooded,
         Volcanic
     }
-    
+
 
     [System.Serializable]
     public class RoomData
@@ -44,21 +44,28 @@ namespace DungeonLayoutGeneration.Generator
     public class DungeonGenerator : MonoBehaviour
     {
         [SerializeField] private DungeonSettings dungeonSettings;
+        
         [SerializeField] private Tilemap terrainTilemap;
         [SerializeField] private Tilemap doorsTilemap;
+        [SerializeField] private Tilemap decorationTilemap; 
+        [SerializeField] private Tilemap backgroundTilemap;
         
         private int numberOfRooms;
         private int distance;
         
         private List<RoomData> rooms = new List<RoomData>();
+
+        private Vector3Int secretRoomCenter;
+        private Vector3Int secretRoomLadderPosition;
         
         [Button("Generate Platformer")]
         public void GeneratePlatformer()
         {
             //0. Reset the previous tilemaps and List
-            terrainTilemap.ClearAllTiles();
-            doorsTilemap.ClearAllTiles();
+            ResetGrid();
+            
             rooms.Clear(); 
+            
             
             //1. Initialize Random/Seed 
             System.Random rng = new System.Random(dungeonSettings.Seed);
@@ -76,6 +83,19 @@ namespace DungeonLayoutGeneration.Generator
             
             //5. Add Floor Variation
             ApplyFloorVariation();
+            
+            //6. Add Secret Room
+            GenerateSecretWall(rng);
+            GenerateSecretRoom();
+            
+            //6. Add decorations
+            ApplyDecorations(rng);
+            
+            
+            
+            
+            //lastly add background tile
+            ApplyBackgroundTiles();
         }
         
 
@@ -288,6 +308,9 @@ namespace DungeonLayoutGeneration.Generator
             
             DrawRectangleRoom(startRoomCenter, startRoomWidth, startRoomHeight);
 
+            Vector3Int doorPos = new Vector3Int(startRoomCenter.x, startRoomCenter.y + startRoomHeight / 2, 0);
+            doorsTilemap.SetTile(doorPos, dungeonSettings.ExitDoorTile);
+
             rooms.Insert(0, new RoomData(startRoomCenter, startRoomWidth, startRoomHeight, RoomType.Rectangle, BiomeType.Ruined));
         }
 
@@ -301,6 +324,9 @@ namespace DungeonLayoutGeneration.Generator
             Vector3Int endRoomCenter = new Vector3Int(lastRoom.center.x + lastRoom.width / 2 + endRoomWidth / 2 + 10, lastRoom.center.y, 0);
             
             DrawRectangleRoom(endRoomCenter, endRoomWidth, endRoomHeight);
+            
+            Vector3Int doorPos = new Vector3Int(endRoomCenter.x, endRoomCenter.y + endRoomHeight / 2, 0);
+            doorsTilemap.SetTile(doorPos, dungeonSettings.ExitDoorTile);
             
             rooms.Insert(rooms.Count, new RoomData(endRoomCenter, endRoomWidth, endRoomHeight, RoomType.Rectangle, BiomeType.Volcanic));
         }
@@ -584,13 +610,309 @@ namespace DungeonLayoutGeneration.Generator
         
         
         
+        //Decorations
+        private void ApplyDecorations(System.Random rng)
+        {
+            BoundsInt bounds = terrainTilemap.cellBounds;
+
+            for (int x = bounds.xMin; x < bounds.xMax; x++)
+            {
+                for (int y = bounds.yMin; y < bounds.yMax; y++)
+                {
+                    Vector3Int pos = new Vector3Int(x, y, 0);
+
+                    if (decorationTilemap.HasTile(pos))
+                    {
+                        continue;
+                    }
+                    if (doorsTilemap.HasTile(pos))
+                    {
+                        continue;
+                    }
+                    if (IsWallTile(pos))
+                    {
+                        continue;
+                    }
+                    if (IsNearDoor(pos))
+                    {
+                        continue;
+                    }
+
+
+                    if (IsFloorTile(pos))
+                    {
+                        PlaceDecoration(pos, rng);
+                    }
+                }                
+            }
+        }
+
+        private void PlaceDecoration(Vector3Int pos, System.Random rng)
+        {
+            RoomData room = GetRoomAtPosition(pos);
+            if (room == null)
+            {
+                room = GetNearestRoomToPosition(pos);
+            }
+
+            bool isNearWall = IsNearWall(pos);
+
+            double chance = rng.NextDouble();
+
+            switch (room.biome)
+            {
+                case BiomeType.Ruined:
+                    if (isNearWall && chance < 0.08)
+                    {
+                        decorationTilemap.SetTile(pos, dungeonSettings.BookshelfTile);
+                        return;
+                    }
+                    if (chance < 0.10)
+                    {
+                        decorationTilemap.SetTile(pos, dungeonSettings.CandlesTile);
+                        return;
+                    }
+                    if (chance < 0.12)
+                    {
+                        decorationTilemap.SetTile(pos, dungeonSettings.SkullTile);
+                        return;
+                    }
+                    if (chance < 0.13)
+                    {
+                        decorationTilemap.SetTile(pos, dungeonSettings.TableTile);
+                        return;
+                    }
+                    if (chance < 0.15)
+                    {
+                        decorationTilemap.SetTile(pos, dungeonSettings.BloodTile);
+                    }
+                    break;
+                
+                case BiomeType.Flooded:
+                    if (isNearWall && chance < 0.08)
+                    {
+                        decorationTilemap.SetTile(pos, dungeonSettings.BookshelfTile);
+                        return;
+                    }
+                    if (isNearWall && chance < 0.13)
+                    {
+                        decorationTilemap.SetTile(pos, dungeonSettings.CobwebTile);
+                        return;
+                    }
+                    if (chance < 0.12)
+                    {
+                        decorationTilemap.SetTile(pos, dungeonSettings.SkullTile);
+                        return;
+                    }
+                    if (chance < 0.14)
+                    {
+                        decorationTilemap.SetTile(pos, dungeonSettings.TableTile);
+                    }
+                    break;
+                
+                case BiomeType.Volcanic:
+                    if (chance < 0.10)
+                    {
+                        decorationTilemap.SetTile(pos, dungeonSettings.HoleTile);
+                        return;
+                    }
+                    if (chance < 0.12)
+                    {
+                        decorationTilemap.SetTile(pos, dungeonSettings.SkullTile);
+                        return;
+                    }
+                    if (chance < 0.15)
+                    {
+                        decorationTilemap.SetTile(pos, dungeonSettings.BloodTile);
+                    }
+                    break;
+            }
+        }
+
+        private bool IsFloorTile(Vector3Int pos)
+        {
+            TileBase tile = terrainTilemap.GetTile(pos);
+
+            return tile == dungeonSettings.DryStoneTile ||
+                   tile == dungeonSettings.CrackedStoneTile ||
+                   tile == dungeonSettings.MossyStoneTile ||
+                   tile == dungeonSettings.DampStoneTile ||
+                   tile == dungeonSettings.VolanicRubbleTile;
+        }
+        
+        private bool IsWallTile(Vector3Int pos)
+        {
+            TileBase tile = terrainTilemap.GetTile(pos);
+
+            return tile == dungeonSettings.WallTile ||
+                   tile == dungeonSettings.SecretWallTile;
+        }
+
+        private bool IsNearWall(Vector3Int pos)
+        {
+            return IsWallTile(pos + Vector3Int.up) ||
+                   IsWallTile(pos + Vector3Int.down) ||
+                   IsWallTile(pos + Vector3Int.left) ||
+                   IsWallTile(pos + Vector3Int.right);
+        }
+
+        private bool IsNearDoor(Vector3Int pos)
+        {
+            int radius = 1;
+
+            for (int x = -radius; x <= radius; x++)
+            {
+                for (int y = -radius; y <= radius; y++)
+                {
+                    Vector3Int checkPosition = new Vector3Int(pos.x + x, pos.y + y, 0);
+
+                    if (doorsTilemap.HasTile(checkPosition))
+                    {
+                        return true;
+                    }
+                }
+            }
+
+            return false;
+        }
+        
+        
+        
+        //Secret Room
+        private void GenerateSecretWall(System.Random rng)
+        {
+            List<Vector3Int> possibleWallPositions = new List<Vector3Int>();
+            
+            for (int i = 1; i < rooms.Count - 1; i++)
+            {
+                possibleWallPositions.AddRange(GetALlWallPositions(rooms[i]));
+            }
+            
+            Vector3Int secretWallPos = possibleWallPositions[rng.Next(possibleWallPositions.Count)];
+            terrainTilemap.SetTile(secretWallPos, dungeonSettings.SecretWallTile);
+        }
+
+        private List<Vector3Int> GetALlWallPositions(RoomData room)
+        {
+            List<Vector3Int> possiblePositions = new List<Vector3Int>();
+
+            int startX = room.center.x - room.width / 2;
+            int endX = room.center.x + room.width / 2;
+            
+            int startY = room.center.y - room.height / 2;
+            int endY = room.center.y + room.height / 2;
+
+            for (int x = startX; x <= endX; x++)
+            {
+                for (int y = startY; y <= endY; y++)
+                {
+                    Vector3Int pos = new Vector3Int(x, y, 0);
+
+                    if (terrainTilemap.GetTile(pos) != dungeonSettings.WallTile)
+                    {
+                        continue;
+                    }
+
+                    //corner walls
+                    if ((x == startX && y == startY) || (x == startX && y == endY) || (x == endX && y == startY) || (x == endX && y == endY))
+                    {
+                        continue;
+                    }
+                    
+                    //check that the wall actually touches a floor. this is important for circle and cross rooms
+                    if (!TouchesFloor(pos))
+                    {
+                        continue;
+                    }
+                    
+                    possiblePositions.Add(pos);
+                }
+            }
+            
+            return possiblePositions;
+        }
+
+        private bool TouchesFloor(Vector3Int pos)
+        {
+            return IsFloorTile(pos + Vector3Int.up) ||
+                   IsFloorTile(pos + Vector3Int.down) ||
+                   IsFloorTile(pos + Vector3Int.right) ||
+                   IsFloorTile(pos + Vector3Int.left);
+        }
+
+        private void GenerateSecretRoom()
+        {
+            BoundsInt bounds = terrainTilemap.cellBounds;
+            
+            secretRoomCenter = new Vector3Int(bounds.xMin + 2 - 30, bounds.yMin, 0);   //30 is padding
+            secretRoomLadderPosition = new Vector3Int(secretRoomCenter.x, secretRoomCenter.y - 2, 0);
+            
+            //now draw the room
+            int width = 5;
+            int height = 5;
+            
+            int startX = secretRoomCenter.x - width / 2;
+            int startY = secretRoomCenter.y - height / 2;
+
+            for (int x = 0; x < width; x++)
+            {
+                for (int y = 0; y < height; y++)
+                {
+                    Vector3Int tilePos = new Vector3Int(startX + x, startY + y, 0);
+
+                    if (x == 0 || x == width - 1 || y == 0 || y == height - 1)
+                    {
+                        terrainTilemap.SetTile(tilePos, dungeonSettings.WallTile);
+                    }
+                    else
+                    {
+                        terrainTilemap.SetTile(tilePos, dungeonSettings.DryStoneTile);
+                    }
+                }
+            }
+            
+            decorationTilemap.SetTile(secretRoomCenter, dungeonSettings.ClosedChestTile);
+            decorationTilemap.SetTile(secretRoomLadderPosition, dungeonSettings.LadderTile);
+        }
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        //Background
+        private void ApplyBackgroundTiles()
+        {
+            BoundsInt bounds = terrainTilemap.cellBounds;
+
+            int padding = 6;
+
+            for (int x = bounds.xMin - padding; x < bounds.xMax + padding; x++)
+            {
+                for (int y = bounds.yMin - padding; y < bounds.yMax + padding; y++)
+                {
+                    Vector3Int pos = new Vector3Int(x, y, 0);
+                    if (terrainTilemap.HasTile(pos) == false)
+                    {
+                        backgroundTilemap.SetTile(new Vector3Int(x, y, 0), dungeonSettings.BackgroundTile);
+                    }
+                }
+            }
+        }
+        
+        
         
         //Reset button function
         [Button("Reset Tilemaps")]
-        public void ResetTerrain()
+        public void ResetGrid()
         {
             terrainTilemap.ClearAllTiles();
             doorsTilemap.ClearAllTiles();
+            decorationTilemap.ClearAllTiles();
+            backgroundTilemap.ClearAllTiles();
         }
     }
 }

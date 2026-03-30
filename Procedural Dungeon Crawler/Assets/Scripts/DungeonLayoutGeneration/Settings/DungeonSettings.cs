@@ -78,6 +78,17 @@ namespace DungeonLayoutGeneration.Settings
         [SerializeField]
         private TileBase doorTile;
         public TileBase DoorTile => doorTile;
+
+        [FoldoutGroup("Tiles")] 
+        [SerializeField]
+        private TileBase exitDoorTile;
+        public TileBase ExitDoorTile => exitDoorTile;
+
+        [FoldoutGroup("Tiles")] 
+        [SerializeField]
+        private TileBase backgroundTile;
+        public TileBase BackgroundTile => backgroundTile;
+        
         
         
         
@@ -121,5 +132,65 @@ namespace DungeonLayoutGeneration.Settings
         [SerializeField]
         private TileBase lavaTile;
         public TileBase LavaTile => lavaTile;
+        
+        
+        
+        
+        [FoldoutGroup("Tiles/Decorations")]
+        [SerializeField]
+        private TileBase skullTile;
+        public TileBase SkullTile => skullTile;
+
+        [FoldoutGroup("Tiles/Decorations")]
+        [SerializeField]
+        private TileBase bloodTile;
+        public TileBase BloodTile => bloodTile;
+        
+        [FoldoutGroup("Tiles/Decorations")]
+        [SerializeField]
+        private TileBase holeTile;
+        public TileBase HoleTile => holeTile;
+        
+        [FoldoutGroup("Tiles/Decorations")]
+        [SerializeField]
+        private TileBase cobwebTile;
+        public TileBase CobwebTile => cobwebTile;
+        
+        [FoldoutGroup("Tiles/Decorations")]
+        [SerializeField]
+        private TileBase candlesTile;
+        public TileBase CandlesTile => candlesTile;
+        
+        [FoldoutGroup("Tiles/Decorations")]
+        [SerializeField]
+        private TileBase bookshelfTile;
+        public TileBase BookshelfTile => bookshelfTile;
+        
+        [FoldoutGroup("Tiles/Decorations")]
+        [SerializeField]
+        private TileBase tableTile;
+        public TileBase TableTile => tableTile;
+        
+        
+        
+        [FoldoutGroup("Tiles/Secret Room")]
+        [SerializeField]
+        private TileBase closedChestTile;
+        public TileBase ClosedChestTile => closedChestTile;
+        
+        [FoldoutGroup("Tiles/Secret Room")]
+        [SerializeField]
+        private TileBase openChestTile;
+        public TileBase OpenChestTile => openChestTile;
+        
+        [FoldoutGroup("Tiles/Secret Room")]
+        [SerializeField]
+        private TileBase secretWallTile;
+        public TileBase SecretWallTile => secretWallTile;
+        
+        [FoldoutGroup("Tiles/Secret Room")]
+        [SerializeField]
+        private TileBase ladderTile;
+        public TileBase LadderTile => ladderTile;
     }
 }

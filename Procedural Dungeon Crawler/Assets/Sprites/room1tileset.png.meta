@@ -257,10 +257,10 @@ TextureImporter:
       name: room1tileset_7
       rect:
         serializedVersion: 2
-        x: 158
+        x: 173
         y: 0
-        width: 128
-        height: 141
+        width: 144
+        height: 140
       alignment: 0
       pivot: {x: 0.5, y: 0.5}
       border: {x: 0, y: 0, z: 0, w: 0}

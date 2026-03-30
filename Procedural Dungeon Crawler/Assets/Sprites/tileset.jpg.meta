@@ -2083,10 +2083,10 @@ TextureImporter:
       name: tileset_90
       rect:
         serializedVersion: 2
-        x: 700
-        y: 388
-        width: 70
-        height: 76
+        x: 706
+        y: 386
+        width: 67
+        height: 71
       alignment: 0
       pivot: {x: 0.5, y: 0.5}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -2105,10 +2105,10 @@ TextureImporter:
       name: tileset_91
       rect:
         serializedVersion: 2
-        x: 770
-        y: 388
-        width: 70
-        height: 76
+        x: 776
+        y: 385
+        width: 67
+        height: 72
       alignment: 0
       pivot: {x: 0.5, y: 0.5}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -2435,10 +2435,10 @@ TextureImporter:
       name: tileset_106
       rect:
         serializedVersion: 2
-        x: 420
-        y: 312
-        width: 70
-        height: 76
+        x: 424
+        y: 309
+        width: 67
+        height: 73
       alignment: 0
       pivot: {x: 0.5, y: 0.5}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -2457,7 +2457,7 @@ TextureImporter:
       name: tileset_107
       rect:
         serializedVersion: 2
-        x: 490
+        x: 489
         y: 312
         width: 70
         height: 76
@@ -2479,10 +2479,10 @@ TextureImporter:
       name: tileset_108
       rect:
         serializedVersion: 2
-        x: 560
-        y: 312
-        width: 70
-        height: 76
+        x: 565
+        y: 309
+        width: 67
+        height: 73
       alignment: 0
       pivot: {x: 0.5, y: 0.5}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -2501,10 +2501,10 @@ TextureImporter:
       name: tileset_109
       rect:
         serializedVersion: 2
-        x: 630
-        y: 312
-        width: 70
-        height: 76
+        x: 636
+        y: 309
+        width: 66
+        height: 73
       alignment: 0
       pivot: {x: 0.5, y: 0.5}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -2523,10 +2523,10 @@ TextureImporter:
       name: tileset_110
       rect:
         serializedVersion: 2
-        x: 700
-        y: 312
-        width: 70
-        height: 76
+        x: 706
+        y: 309
+        width: 67
+        height: 73
       alignment: 0
       pivot: {x: 0.5, y: 0.5}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -2655,10 +2655,10 @@ TextureImporter:
       name: tileset_116
       rect:
         serializedVersion: 2
-        x: 1120
-        y: 312
-        width: 70
-        height: 76
+        x: 1128
+        y: 309
+        width: 67
+        height: 73
       alignment: 0
       pivot: {x: 0.5, y: 0.5}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -2721,10 +2721,10 @@ TextureImporter:
       name: tileset_119
       rect:
         serializedVersion: 2
-        x: 1330
-        y: 312
-        width: 70
-        height: 76
+        x: 1339
+        y: 309
+        width: 66
+        height: 74
       alignment: 0
       pivot: {x: 0.5, y: 0.5}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -3381,10 +3381,10 @@ TextureImporter:
       name: tileset_149
       rect:
         serializedVersion: 2
-        x: 630
-        y: 160
-        width: 70
-        height: 76
+        x: 635
+        y: 155
+        width: 67
+        height: 74
       alignment: 0
       pivot: {x: 0.5, y: 0.5}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -3425,10 +3425,10 @@ TextureImporter:
       name: tileset_151
       rect:
         serializedVersion: 2
-        x: 770
-        y: 160
-        width: 70
-        height: 76
+        x: 776
+        y: 155
+        width: 67
+        height: 73
       alignment: 0
       pivot: {x: 0.5, y: 0.5}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -3447,10 +3447,10 @@ TextureImporter:
       name: tileset_152
       rect:
         serializedVersion: 2
-        x: 840
-        y: 160
-        width: 70
-        height: 76
+        x: 847
+        y: 155
+        width: 66
+        height: 73
       alignment: 0
       pivot: {x: 0.5, y: 0.5}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -3469,10 +3469,10 @@ TextureImporter:
       name: tileset_153
       rect:
         serializedVersion: 2
-        x: 910
-        y: 160
-        width: 70
-        height: 76
+        x: 917
+        y: 156
+        width: 67
+        height: 73
       alignment: 0
       pivot: {x: 0.5, y: 0.5}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -3491,10 +3491,10 @@ TextureImporter:
       name: tileset_154
       rect:
         serializedVersion: 2
-        x: 980
-        y: 160
-        width: 70
-        height: 76
+        x: 987
+        y: 156
+        width: 67
+        height: 72
       alignment: 0
       pivot: {x: 0.5, y: 0.5}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -4019,10 +4019,10 @@ TextureImporter:
       name: tileset_178
       rect:
         serializedVersion: 2
-        x: 1260
-        y: 84
-        width: 70
-        height: 76
+        x: 1269
+        y: 79
+        width: 67
+        height: 73
       alignment: 0
       pivot: {x: 0.5, y: 0.5}
       border: {x: 0, y: 0, z: 0, w: 0}
