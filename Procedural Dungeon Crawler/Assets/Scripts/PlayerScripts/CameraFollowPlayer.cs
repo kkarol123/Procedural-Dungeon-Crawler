@@ -13,5 +13,10 @@ namespace PlayerScripts
             Vector3 targetPosition = playerTransform.position + offset;
             transform.position = Vector3.Lerp(transform.position, targetPosition, smoothSpeed * Time.deltaTime);
         }
+
+        public void SnapToPlayer()
+        {
+            transform.position = playerTransform.position + offset;
+        }
     }
 }

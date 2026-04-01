@@ -3,6 +3,7 @@ using Sirenix.OdinInspector;
 using UnityEngine.Tilemaps;
 using DungeonLayoutGeneration.Settings;
 using System.Collections.Generic;
+using InteractableScripts;
 
 namespace DungeonLayoutGeneration.Generator
 {
@@ -27,20 +28,18 @@ namespace DungeonLayoutGeneration.Generator
         public Vector3Int center;
         public int width;
         public int height;
-        public RoomType type;
         public BiomeType biome;
 
-        public RoomData(Vector3Int center, int width, int height, RoomType type, BiomeType biome)
+        public RoomData(Vector3Int center, int width, int height, BiomeType biome)
         {
             this.center = center;
             this.width = width;
             this.height = height;
-            this.type = type;
             this.biome = biome;
         }
     }
     
-    [ExecuteAlways]
+    
     public class DungeonGenerator : MonoBehaviour
     {
         [SerializeField] private DungeonSettings dungeonSettings;
@@ -48,10 +47,9 @@ namespace DungeonLayoutGeneration.Generator
         [SerializeField] private Tilemap floorsTilemap;
         [SerializeField] private Tilemap wallsTilemap;
         [SerializeField] private Tilemap doorsTilemap;
-        [SerializeField] private Tilemap decorationTilemap; 
+        [SerializeField] private Tilemap collisionDecorationTilemap; 
+        [SerializeField] private Tilemap nonCollisionDecorationTilemap;
         [SerializeField] private Tilemap backgroundTilemap;
-        
-        [SerializeField] private GameObject doorPrefab;
         
         private int numberOfRooms;
         private int distance;
@@ -60,13 +58,28 @@ namespace DungeonLayoutGeneration.Generator
 
         private Vector3Int secretRoomCenter;
         private Vector3Int secretRoomLadderPosition;
+        private GameObject secretRoomLadderObject;
+        private Vector3Int dungeonLadderPosition;
+        
+        private Vector3Int startDoorPosition;
+        public Vector3Int StartDoorPosition => startDoorPosition;
+        
+        [SerializeField] private GameObject doorPrefab;
+        [SerializeField] private GameObject ammoPickupPrefab;
+        [SerializeField] private GameObject medkitPickupPrefab;
+        [SerializeField] private GameObject chestPrefab;
+        [SerializeField] private GameObject secretWallPrefab;
+        [SerializeField] private GameObject ladderPrefab;
+            
+            
+            
+            
         
         [Button("Generate Platformer")]
-        public void GeneratePlatformer()
+        public void GenerateDungeon()
         {
             //0. Reset the previous tilemaps and List
             ResetGrid();
-            
             rooms.Clear(); 
             
             
@@ -88,16 +101,17 @@ namespace DungeonLayoutGeneration.Generator
             ApplyFloorVariation();
             
             //6. Add Secret Room
-            GenerateSecretWall(rng);
             GenerateSecretRoom();
+            GenerateSecretWall(rng);
+            
             
             //6. Add decorations
             ApplyDecorations(rng);
             
+            //7. Spawn Pickups
+            GeneratePickups(rng);
             
-            
-            
-            //lastly add background tile
+            //8. Add Background
             ApplyBackgroundTiles();
         }
         
@@ -144,7 +158,7 @@ namespace DungeonLayoutGeneration.Generator
 
                     BiomeType biome = GetBiomeForRoomIndex(roomsCreated, numberOfRooms);
 
-                    rooms.Add(new RoomData(currentPos, width, height, roomType, biome));
+                    rooms.Add(new RoomData(currentPos, width, height, biome));
                     roomsCreated++;
 
                     int direction = rng.Next(0, 3);
@@ -312,9 +326,10 @@ namespace DungeonLayoutGeneration.Generator
             DrawRectangleRoom(startRoomCenter, startRoomWidth, startRoomHeight);
 
             Vector3Int doorPos = new Vector3Int(startRoomCenter.x, startRoomCenter.y + startRoomHeight / 2, 0);
+            startDoorPosition = doorPos;
             doorsTilemap.SetTile(doorPos, dungeonSettings.ExitDoorTile);
 
-            rooms.Insert(0, new RoomData(startRoomCenter, startRoomWidth, startRoomHeight, RoomType.Rectangle, BiomeType.Ruined));
+            rooms.Insert(0, new RoomData(startRoomCenter, startRoomWidth, startRoomHeight, BiomeType.Ruined));
         }
 
         private void GenerateEndRoom()
@@ -331,7 +346,7 @@ namespace DungeonLayoutGeneration.Generator
             Vector3Int doorPos = new Vector3Int(endRoomCenter.x, endRoomCenter.y + endRoomHeight / 2, 0);
             doorsTilemap.SetTile(doorPos, dungeonSettings.ExitDoorTile);
             
-            rooms.Insert(rooms.Count, new RoomData(endRoomCenter, endRoomWidth, endRoomHeight, RoomType.Rectangle, BiomeType.Volcanic));
+            rooms.Insert(rooms.Count, new RoomData(endRoomCenter, endRoomWidth, endRoomHeight, BiomeType.Volcanic));
         }
         
         
@@ -471,7 +486,10 @@ namespace DungeonLayoutGeneration.Generator
         private void SpawnDoorObject(Vector3Int doorPosition)
         {
             Vector3 worldPosition = doorsTilemap.GetCellCenterWorld(doorPosition);
-            Instantiate(doorPrefab, worldPosition, Quaternion.identity, transform);
+            GameObject doorObject = Instantiate(doorPrefab, worldPosition, Quaternion.identity, transform);
+            
+            DoorScript doorScript = doorObject.GetComponent<DoorScript>();
+            doorScript.InitialiseDoor(doorsTilemap, doorPosition);
         }
         
         
@@ -636,7 +654,7 @@ namespace DungeonLayoutGeneration.Generator
                 {
                     Vector3Int pos = new Vector3Int(x, y, 0);
 
-                    if (decorationTilemap.HasTile(pos))
+                    if (collisionDecorationTilemap.HasTile(pos) || nonCollisionDecorationTilemap.HasTile(pos))
                     {
                         continue;
                     }
@@ -679,66 +697,66 @@ namespace DungeonLayoutGeneration.Generator
                 case BiomeType.Ruined:
                     if (isNearWall && chance < 0.08)
                     {
-                        decorationTilemap.SetTile(pos, dungeonSettings.BookshelfTile);
+                        collisionDecorationTilemap.SetTile(pos, dungeonSettings.BookshelfTile);
                         return;
                     }
                     if (chance < 0.10)
                     {
-                        decorationTilemap.SetTile(pos, dungeonSettings.CandlesTile);
+                        nonCollisionDecorationTilemap.SetTile(pos, dungeonSettings.CandlesTile);
                         return;
                     }
                     if (chance < 0.12)
                     {
-                        decorationTilemap.SetTile(pos, dungeonSettings.SkullTile);
+                        nonCollisionDecorationTilemap.SetTile(pos, dungeonSettings.SkullTile);
                         return;
                     }
                     if (chance < 0.13)
                     {
-                        decorationTilemap.SetTile(pos, dungeonSettings.TableTile);
+                        collisionDecorationTilemap.SetTile(pos, dungeonSettings.TableTile);
                         return;
                     }
                     if (chance < 0.15)
                     {
-                        decorationTilemap.SetTile(pos, dungeonSettings.BloodTile);
+                        nonCollisionDecorationTilemap.SetTile(pos, dungeonSettings.BloodTile);
                     }
                     break;
                 
                 case BiomeType.Flooded:
                     if (isNearWall && chance < 0.08)
                     {
-                        decorationTilemap.SetTile(pos, dungeonSettings.BookshelfTile);
+                        collisionDecorationTilemap.SetTile(pos, dungeonSettings.BookshelfTile);
                         return;
                     }
                     if (isNearWall && chance < 0.13)
                     {
-                        decorationTilemap.SetTile(pos, dungeonSettings.CobwebTile);
+                        nonCollisionDecorationTilemap.SetTile(pos, dungeonSettings.CobwebTile);
                         return;
                     }
                     if (chance < 0.12)
                     {
-                        decorationTilemap.SetTile(pos, dungeonSettings.SkullTile);
+                        nonCollisionDecorationTilemap.SetTile(pos, dungeonSettings.SkullTile);
                         return;
                     }
                     if (chance < 0.14)
                     {
-                        decorationTilemap.SetTile(pos, dungeonSettings.TableTile);
+                        collisionDecorationTilemap.SetTile(pos, dungeonSettings.TableTile);
                     }
                     break;
                 
                 case BiomeType.Volcanic:
                     if (chance < 0.10)
                     {
-                        decorationTilemap.SetTile(pos, dungeonSettings.HoleTile);
+                        nonCollisionDecorationTilemap.SetTile(pos, dungeonSettings.HoleTile);
                         return;
                     }
                     if (chance < 0.12)
                     {
-                        decorationTilemap.SetTile(pos, dungeonSettings.SkullTile);
+                        nonCollisionDecorationTilemap.SetTile(pos, dungeonSettings.SkullTile);
                         return;
                     }
                     if (chance < 0.15)
                     {
-                        decorationTilemap.SetTile(pos, dungeonSettings.BloodTile);
+                        nonCollisionDecorationTilemap.SetTile(pos, dungeonSettings.BloodTile);
                     }
                     break;
             }
@@ -804,7 +822,21 @@ namespace DungeonLayoutGeneration.Generator
             }
             
             Vector3Int secretWallPos = possibleWallPositions[rng.Next(possibleWallPositions.Count)];
+            dungeonLadderPosition = secretWallPos;
+            
+            LadderScript secretRoomLadderScript = secretRoomLadderObject.GetComponent<LadderScript>();
+            Vector3 dungeonLadderWorldPosition = wallsTilemap.GetCellCenterWorld(dungeonLadderPosition) + new Vector3(0f, 1f, 0f);
+            secretRoomLadderScript.InitialiseLadder(dungeonLadderWorldPosition);
+            
             wallsTilemap.SetTile(secretWallPos, dungeonSettings.SecretWallTile);
+            
+            Vector3 worldPosition = wallsTilemap.GetCellCenterWorld(secretWallPos);
+            GameObject secretWallObject = Instantiate(secretWallPrefab, worldPosition, Quaternion.identity, transform);
+            
+            SecretWallScript secretWallScript = secretWallObject.GetComponent<SecretWallScript>();
+            Vector3 secretRoomWorldPosition = collisionDecorationTilemap.GetCellCenterWorld(secretRoomLadderPosition) + new Vector3(0f, 1f, 0f);
+            
+            secretWallScript.InitialiseSecretWall(wallsTilemap, collisionDecorationTilemap, secretWallPos, dungeonSettings.LadderTile, ladderPrefab, secretRoomWorldPosition);
         }
 
         private List<Vector3Int> GetALlWallPositions(RoomData room)
@@ -860,11 +892,11 @@ namespace DungeonLayoutGeneration.Generator
             BoundsInt bounds = wallsTilemap.cellBounds;
             
             secretRoomCenter = new Vector3Int(bounds.xMin + 2 - 30, bounds.yMin, 0);   //30 is padding
-            secretRoomLadderPosition = new Vector3Int(secretRoomCenter.x, secretRoomCenter.y - 2, 0);
+            secretRoomLadderPosition = new Vector3Int(secretRoomCenter.x, secretRoomCenter.y - 3, 0);
             
             //now draw the room
             int width = 5;
-            int height = 5;
+            int height = 6;
             
             int startX = secretRoomCenter.x - width / 2;
             int startY = secretRoomCenter.y - height / 2;
@@ -886,12 +918,62 @@ namespace DungeonLayoutGeneration.Generator
                 }
             }
             
-            decorationTilemap.SetTile(secretRoomCenter, dungeonSettings.ClosedChestTile);
-            decorationTilemap.SetTile(secretRoomLadderPosition, dungeonSettings.LadderTile);
+            collisionDecorationTilemap.SetTile(secretRoomCenter, dungeonSettings.ClosedChestTile);
+            collisionDecorationTilemap.SetTile(secretRoomLadderPosition, dungeonSettings.LadderTile);
+            
+            Vector3 chestWorldPosition = collisionDecorationTilemap.GetCellCenterWorld(secretRoomCenter);
+            GameObject chestObject = Instantiate(chestPrefab, chestWorldPosition, Quaternion.identity, transform);
+            
+            ChestScript chestScript = chestObject.GetComponent<ChestScript>();
+            chestScript.InitialiseChest(collisionDecorationTilemap, secretRoomCenter);
+            
+            Vector3 ladderWorldPosition = collisionDecorationTilemap.GetCellCenterWorld(secretRoomLadderPosition);
+            secretRoomLadderObject = Instantiate(ladderPrefab, ladderWorldPosition, Quaternion.identity, transform);
         }
         
         
-        
+        //Generate Pickups
+        private void GeneratePickups(System.Random rng)
+        {
+            BoundsInt bounds = floorsTilemap.cellBounds;
+
+            for (int x = bounds.xMin; x <= bounds.xMax; x++)
+            {
+                for (int y = bounds.yMin; y <= bounds.yMax; y++)
+                {
+                    Vector3Int pos = new Vector3Int(x, y, 0);
+
+                    if (!IsFloorTile(pos))
+                    {
+                        continue;
+                    }
+                    if (IsNearDoor(pos))
+                    {
+                        continue;
+                    }
+                    if (nonCollisionDecorationTilemap.HasTile(pos) || collisionDecorationTilemap.HasTile(pos))
+                    {
+                        continue;
+                    }
+
+                    
+                    Vector3 worldPosition = floorsTilemap.CellToWorld(pos);
+                    worldPosition.x += 0.5f;
+                    worldPosition.y += 0.5f;
+                    worldPosition.z -= 4f;
+                    double spawnChance = rng.NextDouble();
+                    if (spawnChance < 0.0025)
+                    {
+                        Instantiate(medkitPickupPrefab, worldPosition, Quaternion.identity, transform);
+                        continue;
+                    }
+                    if (spawnChance < 0.008)
+                    {
+                        Instantiate(ammoPickupPrefab, worldPosition, Quaternion.identity, transform);
+                    }
+                }
+            }
+        }
         
         
         
@@ -903,7 +985,7 @@ namespace DungeonLayoutGeneration.Generator
         {
             BoundsInt bounds = wallsTilemap.cellBounds;
 
-            int padding = 6;
+            int padding = 9;
 
             for (int x = bounds.xMin - padding; x < bounds.xMax + padding; x++)
             {
@@ -927,11 +1009,12 @@ namespace DungeonLayoutGeneration.Generator
             floorsTilemap.ClearAllTiles();
             wallsTilemap.ClearAllTiles();
             doorsTilemap.ClearAllTiles();
-            decorationTilemap.ClearAllTiles();
+            collisionDecorationTilemap.ClearAllTiles();
+            nonCollisionDecorationTilemap.ClearAllTiles();
             backgroundTilemap.ClearAllTiles();
             
             
-            //destroy the old spawned door objects
+            //destroy the old spawned gameobjects
             for (int i = transform.childCount - 1; i >= 0; i--)
             {
                 DestroyImmediate(transform.GetChild(i).gameObject);

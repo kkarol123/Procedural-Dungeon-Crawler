@@ -1,6 +1,8 @@
 using UnityEngine;
 using System.Collections;
-using UnityEngine.SceneManagement;
+using DungeonLayoutGeneration.Settings;
+using GameManagerScripts;
+using UnityEngine.Tilemaps;
 
 namespace PlayerScripts
 {
@@ -11,31 +13,43 @@ namespace PlayerScripts
         
         [SerializeField] private float moveSpeed = 5f;
         [SerializeField] private float rotateSpeed = 20f;
-        
+        private bool controlsLocked;
+
+        [SerializeField] private int damage;
         [SerializeField] private Transform gunTip;
         [SerializeField] private GameObject bulletPrefab;
         [SerializeField] int clipSize = 8;
         private int ammoInClip = 8;
         private int ammoInReserve = 16;
-        private int maxAmmo = 32;
+        [SerializeField] int maxAmmo = 32;
         private bool isReloading;
-        [SerializeField] float reloadTime = 2f;
+        [SerializeField] private float reloadTime = 2f;
         
         [SerializeField] private int health = 5;
         [SerializeField] private int maxHealth = 5;
         private bool canTakeDamage = true;
         [SerializeField] private Color damageColor = Color.red;
         private Color originalColor;
-        private bool playerDied;
         [SerializeField] private Sprite playerDeadSprite;
 
-        [SerializeField] bool hasKey = true;
+        [SerializeField] private bool hasKey = true;
+        
+        [SerializeField] private Tilemap floorsTilemap;
+        [SerializeField] private DungeonSettings dungeonSettings;
+        [SerializeField] private float waterSpeedMultiplier = 0.5f;
+        [SerializeField] private float lavaSpeedMultiplier = 0.8f;
+        private float currentWalkSpeed;
+        
+        
         
         public int Health => health;
         public int AmmoInClip => ammoInClip;
         public int AmmoInReserve => ammoInReserve;
         public bool IsReloading => isReloading;
         public bool HasKey => hasKey;
+        public int MaxHealth => maxHealth;
+        public int MaxAmmo => maxAmmo;
+        public int Damage => damage;
         
         
         
@@ -48,19 +62,19 @@ namespace PlayerScripts
 
         void Update()
         {
+            CheckForEnvironmentEffects();
+            
             PlayerMovement();
             PlayerRotate();
+            
             PlayerShoot();
             CheckIfPlayerReloading();
-            
-            PlayerGetHealth();
-            PlayerTakeDamage();
         }
 
         //Player movement and rotation
         private void PlayerMovement()
         {
-            if (playerDied)
+            if (controlsLocked)
             {
                 return;
             }
@@ -85,12 +99,12 @@ namespace PlayerScripts
                 moveX = 1f;
             }
 
-            rb.linearVelocity = new Vector2(moveX, moveY).normalized * moveSpeed;   //normalized will fix movement speed diagonally being faster than vertical movement speed
+            rb.linearVelocity = new Vector2(moveX, moveY).normalized * currentWalkSpeed;   //normalized will fix movement speed diagonally being faster than vertical movement speed
         }
 
         private void PlayerRotate()
         {
-            if (playerDied)
+            if (controlsLocked)
             {
                 return;
             }
@@ -115,7 +129,7 @@ namespace PlayerScripts
         //Player shooting
         private void PlayerShoot()
         {
-            if (isReloading)
+            if (isReloading || controlsLocked)
             {
                 return;
             }
@@ -132,7 +146,7 @@ namespace PlayerScripts
 
         private void CheckIfPlayerReloading()
         {
-            if (playerDied)
+            if (controlsLocked)
             {
                 return;
             }
@@ -170,27 +184,37 @@ namespace PlayerScripts
 
             isReloading = false;
         }
+
+        public void AddAmmoInReserve()
+        {
+            int totalAmmo = ammoInClip + ammoInReserve;
+            totalAmmo += 8;
+
+            if (totalAmmo > maxAmmo)
+            {
+                totalAmmo = maxAmmo;
+            }
+
+            ammoInReserve = totalAmmo - ammoInClip;
+        }
         
         
         //Player health
         private void PlayerTakeDamage()
         {
-            if (Input.GetKeyDown(KeyCode.H))
+            if (!canTakeDamage)
             {
-                if (!canTakeDamage)
-                {
-                    return;
-                }
-                
-                health--;
-                if (health <= 0)
-                {
-                    PlayerDied();
-                    return;
-                }
-
-                StartCoroutine(DamageCoolDownCoroutine());
+                return;
             }
+                
+            health--;
+            if (health <= 0)
+            {
+                PlayerDied();
+                return;
+            }
+
+            StartCoroutine(DamageCoolDownCoroutine());
         }
 
         private IEnumerator DamageCoolDownCoroutine()
@@ -205,40 +229,101 @@ namespace PlayerScripts
             canTakeDamage = true;
         }
 
-        private void PlayerGetHealth()
+        public void PlayerGetHealth()
         {
-            if (playerDied)
+            if (controlsLocked)
             {
                 return;
             }
-            if (Input.GetKeyDown(KeyCode.Space))
+            
+            if (health < maxHealth)
             {
-                if (health < maxHealth)
-                {
-                    health++;
-                }
+                health++;
             }
         }
 
         private void PlayerDied()
         {
-            if (playerDied)
+            if (controlsLocked)
             {
                 return;
             }
             
             spriteRenderer.sprite = playerDeadSprite;
-            playerDied = true;
-            isReloading = false;
+            LockControls();
 
-            StartCoroutine(CooldownToDiedScene());
+            ScreenFadeManager.Instance.FadeLoadScene("DeathScreen");
+        }
+        
+        
+        
+        //Player key
+        public void UseKey()
+        {
+            hasKey = false;
+        }
+        
+        
+        
+        //Environment Effects
+        private void CheckForEnvironmentEffects()
+        {
+            currentWalkSpeed = moveSpeed;
+            
+            Vector3Int playerCellPosition = floorsTilemap.WorldToCell(transform.position);
+            TileBase currentTile = floorsTilemap.GetTile(playerCellPosition);
+
+            if (currentTile == dungeonSettings.PuddleTile)
+            {
+                currentWalkSpeed = moveSpeed * waterSpeedMultiplier;
+            }
+
+            if (currentTile == dungeonSettings.LavaTile)
+            {
+                currentWalkSpeed = moveSpeed * lavaSpeedMultiplier;
+                PlayerTakeDamage();
+            }
+        }
+        
+        
+        
+        //Lock player
+        public void LockControls()
+        {
+            controlsLocked = true;
+            rb.linearVelocity = Vector3.zero;
+            isReloading = false;
         }
 
-        private IEnumerator CooldownToDiedScene()
+        public void UnlockControls()
         {
-            yield return new WaitForSeconds(3f);
+            controlsLocked = false;
+        }
+        
+        
+        
+        //Upgrades
+        public void IncreaseMaxAmmo()
+        {
+            maxAmmo += 8;
+            ammoInReserve += 8;
             
-            SceneManager.LoadScene("DeathScene");
+            int totalAmmo = ammoInClip + ammoInReserve;
+            if (totalAmmo > maxAmmo)
+            {
+                ammoInReserve = maxAmmo - ammoInClip;
+            }
+        }
+
+        public void IncreaseMaxHealth()
+        {
+            maxHealth += 1;
+            health += 1;
+        }
+
+        public void IncreaseDamageOutput()
+        {
+            damage += 1;
         }
     }
 }

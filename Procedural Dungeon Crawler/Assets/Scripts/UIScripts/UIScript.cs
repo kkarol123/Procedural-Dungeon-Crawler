@@ -37,7 +37,7 @@ namespace UIScripts
         {
             if (player.IsReloading)
             {
-                ammoText.text = "Reloading... / " + player.AmmoInReserve ;
+                ammoText.text = "RELOADING... / " + player.AmmoInReserve ;
             }
             else
             {
