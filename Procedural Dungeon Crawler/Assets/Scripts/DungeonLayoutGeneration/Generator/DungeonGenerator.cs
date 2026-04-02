@@ -21,7 +21,6 @@ namespace DungeonLayoutGeneration.Generator
         Volcanic
     }
 
-
     [System.Serializable]
     public class RoomData
     {
@@ -38,6 +37,31 @@ namespace DungeonLayoutGeneration.Generator
             this.biome = biome;
         }
     }
+    
+    
+
+    [System.Serializable]
+    public class EnemySpawnData
+    {
+        public Vector3Int position;
+        public int roomIndex;
+        public EnemyType enemyType;
+
+        public EnemySpawnData(Vector3Int pos, int room, EnemyType type)
+        {
+            position = pos;
+            roomIndex = room;
+            enemyType = type;
+        }
+    }
+
+    public enum EnemyType
+    {
+        Zombie,
+        Skeleton,
+        Spider
+    }
+    
     
     
     public class DungeonGenerator : MonoBehaviour
@@ -70,8 +94,13 @@ namespace DungeonLayoutGeneration.Generator
         [SerializeField] private GameObject chestPrefab;
         [SerializeField] private GameObject secretWallPrefab;
         [SerializeField] private GameObject ladderPrefab;
-            
-            
+        [SerializeField] private GameObject signPrefab;
+
+        private List<EnemySpawnData> enemySpawnPoints = new List<EnemySpawnData>();
+        public List<EnemySpawnData> EnemySpawnPoints => enemySpawnPoints;
+        [SerializeField] private GameObject zombieEnemyPrefab;
+        [SerializeField] private GameObject skeletonEnemyPrefab;
+        [SerializeField] private GameObject spiderEnemyPrefab;
             
             
         
@@ -80,7 +109,6 @@ namespace DungeonLayoutGeneration.Generator
         {
             //0. Reset the previous tilemaps and List
             ResetGrid();
-            rooms.Clear(); 
             
             
             //1. Initialize Random/Seed 
@@ -103,7 +131,7 @@ namespace DungeonLayoutGeneration.Generator
             //6. Add Secret Room
             GenerateSecretRoom();
             GenerateSecretWall(rng);
-            
+            GenerateSecretSign(rng, dungeonLadderPosition);
             
             //6. Add decorations
             ApplyDecorations(rng);
@@ -111,7 +139,12 @@ namespace DungeonLayoutGeneration.Generator
             //7. Spawn Pickups
             GeneratePickups(rng);
             
-            //8. Add Background
+            
+            //8. Generate enemy spawn points
+            GenerateEnemySpawnPoints(rng);
+            
+            
+            //9. Add Background
             ApplyBackgroundTiles();
         }
         
@@ -522,6 +555,12 @@ namespace DungeonLayoutGeneration.Generator
                         if (room != null) //if a room is found
                         {
                             TileBase variedTile = GetFloorVariationTile(pos, room.biome, offsetX, offsetY);
+
+                            if (variedTile == dungeonSettings.LavaTile && IsNearDoor(pos))
+                            {
+                                variedTile = dungeonSettings.CrackedStoneTile;
+                            }
+                            
                             floorsTilemap.SetTile(pos, variedTile);
                         }
                     }
@@ -812,6 +851,58 @@ namespace DungeonLayoutGeneration.Generator
         
         
         //Secret Room
+        private void GenerateSecretSign(System.Random rng, Vector3Int ladderPosition)
+        {
+            RoomData ladderRoom = GetRoomAtPosition(ladderPosition);
+            List<Vector3Int> validSignPositions = GetValidRoomFloorPositions(ladderRoom);
+
+            Vector3Int signPosition = validSignPositions[rng.Next(validSignPositions.Count)];
+            collisionDecorationTilemap.SetTile(signPosition, dungeonSettings.SignTile);
+            
+            Vector3 worldPosition = collisionDecorationTilemap.GetCellCenterWorld(signPosition);
+            worldPosition.z = -4f;
+            
+            GameObject signObject = Instantiate(signPrefab, worldPosition, Quaternion.identity, transform);
+            SignScript signScript =  signObject.GetComponent<SignScript>();
+            signScript.SetSignUIManager(FindFirstObjectByType<UIScripts.SignUIManager>());
+        }
+        
+        private List<Vector3Int> GetValidRoomFloorPositions(RoomData room)
+        {
+            List<Vector3Int> validPositions = new List<Vector3Int>();
+
+            int startX = room.center.x - room.width / 2;
+            int endX = startX + room.width - 1;
+            
+            int startY = room.center.y - room.height / 2;
+            int endY = startY + room.height - 1;
+
+            for (int x = startX + 1; x <= endX; x++)
+            {
+                for (int y = startY + 1; y <= endY; y++)
+                {
+                    Vector3Int pos = new Vector3Int(x, y, 0);
+
+                    if (!IsFloorTile(pos))
+                    {
+                        continue;
+                    }
+                    if (IsNearDoor(pos))
+                    {
+                        continue;
+                    }
+                    if (collisionDecorationTilemap.HasTile(pos) || nonCollisionDecorationTilemap.HasTile(pos))
+                    {
+                        continue;
+                    }
+                    
+                    validPositions.Add(pos);
+                }
+            }
+
+            return validPositions;
+        }
+        
         private void GenerateSecretWall(System.Random rng)
         {
             List<Vector3Int> possibleWallPositions = new List<Vector3Int>();
@@ -825,7 +916,7 @@ namespace DungeonLayoutGeneration.Generator
             dungeonLadderPosition = secretWallPos;
             
             LadderScript secretRoomLadderScript = secretRoomLadderObject.GetComponent<LadderScript>();
-            Vector3 dungeonLadderWorldPosition = wallsTilemap.GetCellCenterWorld(dungeonLadderPosition) + new Vector3(0f, 1f, 0f);
+            Vector3 dungeonLadderWorldPosition = GetDungeonLadderExitWorldPosition(dungeonLadderPosition);
             secretRoomLadderScript.InitialiseLadder(dungeonLadderWorldPosition);
             
             wallsTilemap.SetTile(secretWallPos, dungeonSettings.SecretWallTile);
@@ -837,6 +928,38 @@ namespace DungeonLayoutGeneration.Generator
             Vector3 secretRoomWorldPosition = collisionDecorationTilemap.GetCellCenterWorld(secretRoomLadderPosition) + new Vector3(0f, 1f, 0f);
             
             secretWallScript.InitialiseSecretWall(wallsTilemap, collisionDecorationTilemap, secretWallPos, dungeonSettings.LadderTile, ladderPrefab, secretRoomWorldPosition);
+        }
+
+        private Vector3 GetDungeonLadderExitWorldPosition(Vector3Int wallPosition)
+        {
+            Vector3Int[] checkDirections =
+            {
+                Vector3Int.up,
+                Vector3Int.right,
+                Vector3Int.down,
+                Vector3Int.left
+            };
+            
+            for (int i = 0; i < checkDirections.Length; i++)
+            {
+                Vector3Int checkPosition = wallPosition + checkDirections[i];
+
+                if (!IsFloorTile(checkPosition))
+                {
+                    continue;
+                }
+
+                if (collisionDecorationTilemap.HasTile(checkPosition))
+                {
+                    continue;
+                }
+                
+                Vector3 worldPosition = floorsTilemap.GetCellCenterWorld(checkPosition);
+                worldPosition.z = -4f;
+                return worldPosition;
+            }
+
+            return Vector3Int.zero;
         }
 
         private List<Vector3Int> GetALlWallPositions(RoomData room)
@@ -925,11 +1048,13 @@ namespace DungeonLayoutGeneration.Generator
             GameObject chestObject = Instantiate(chestPrefab, chestWorldPosition, Quaternion.identity, transform);
             
             ChestScript chestScript = chestObject.GetComponent<ChestScript>();
-            chestScript.InitialiseChest(collisionDecorationTilemap, secretRoomCenter);
+            chestScript.InitialiseChest(collisionDecorationTilemap, secretRoomCenter, dungeonSettings);
+            chestScript.SetRewardManager(FindFirstObjectByType<UIScripts.ChestRewardManager>());
             
             Vector3 ladderWorldPosition = collisionDecorationTilemap.GetCellCenterWorld(secretRoomLadderPosition);
             secretRoomLadderObject = Instantiate(ladderPrefab, ladderWorldPosition, Quaternion.identity, transform);
         }
+        
         
         
         //Generate Pickups
@@ -967,7 +1092,7 @@ namespace DungeonLayoutGeneration.Generator
                         Instantiate(medkitPickupPrefab, worldPosition, Quaternion.identity, transform);
                         continue;
                     }
-                    if (spawnChance < 0.008)
+                    if (spawnChance < 0.015)
                     {
                         Instantiate(ammoPickupPrefab, worldPosition, Quaternion.identity, transform);
                     }
@@ -977,6 +1102,78 @@ namespace DungeonLayoutGeneration.Generator
         
         
         
+        //Generate enemies
+        private void GenerateEnemySpawnPoints(System.Random rng)
+        {
+            for (int roomIndex = 1; roomIndex < rooms.Count - 1; roomIndex++)
+            {
+                RoomData room = rooms[roomIndex];
+                List<Vector3Int> validPositions = GetValidRoomFloorPositions(room);
+                
+                int roomArea = room.width * room.height;
+                int baseSpawnCount;
+
+                if (roomArea < 50)
+                {
+                    baseSpawnCount = 1;
+                }
+                else if (roomArea < 90)
+                {
+                    baseSpawnCount = 2;
+                }
+                else
+                {
+                    baseSpawnCount = 3;
+                }
+                
+                //add more enemies the further in the dungeon level the player is
+                int distanceBonus = Mathf.Clamp(roomIndex / 2, 0, 2);
+                int spawnCount = Mathf.Min(baseSpawnCount + distanceBonus, validPositions.Count);
+
+                for (int i = 0; i < spawnCount; i++)
+                {
+                    int randomIndex = rng.Next(validPositions.Count);
+                    Vector3Int chosenPosition = validPositions[randomIndex];
+
+                    EnemyType chosenEnemyType = GetRandomEnemyType(rng);
+                    enemySpawnPoints.Add(new EnemySpawnData(chosenPosition, roomIndex, chosenEnemyType));
+                    GameObject prefabToSpawn = GetEnemyPrefab(chosenEnemyType);
+
+                    Vector3 worldPosition = floorsTilemap.GetCellCenterWorld(chosenPosition);
+                    worldPosition.z = -4f;
+                    
+                    Instantiate(prefabToSpawn, worldPosition, Quaternion.identity, transform);
+                }
+            }
+        }
+        
+        private EnemyType GetRandomEnemyType(System.Random rng)
+        {
+            int randomNum = rng.Next(0, 3);
+
+            switch (randomNum)
+            {
+                case 0:
+                    return EnemyType.Zombie;
+                case 1:
+                    return EnemyType.Skeleton;
+                default:
+                    return EnemyType.Spider;
+            }
+        }
+
+        private GameObject GetEnemyPrefab(EnemyType enemyType)
+        {
+            switch (enemyType)
+            {
+                case EnemyType.Zombie:
+                    return zombieEnemyPrefab;
+                case EnemyType.Skeleton:
+                    return skeletonEnemyPrefab;
+                default:
+                    return spiderEnemyPrefab;
+            }
+        }
         
         
         
@@ -1002,6 +1199,9 @@ namespace DungeonLayoutGeneration.Generator
         
         
         
+        
+        
+        
         //Reset button function
         [Button("Reset Tilemaps")]
         public void ResetGrid()
@@ -1013,6 +1213,8 @@ namespace DungeonLayoutGeneration.Generator
             nonCollisionDecorationTilemap.ClearAllTiles();
             backgroundTilemap.ClearAllTiles();
             
+            rooms.Clear(); 
+            enemySpawnPoints.Clear();
             
             //destroy the old spawned gameobjects
             for (int i = transform.childCount - 1; i >= 0; i--)

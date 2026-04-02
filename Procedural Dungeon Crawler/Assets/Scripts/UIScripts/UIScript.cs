@@ -1,3 +1,4 @@
+using GameManagerScripts;
 using UnityEngine;
 using UnityEngine.UI;
 using PlayerScripts;
@@ -8,6 +9,7 @@ namespace UIScripts
     public class UIScript : MonoBehaviour
     {
         [SerializeField] private Player player;
+        [SerializeField] private GameManager gameManager;
     
         [SerializeField] private Image[] hearts;
         [SerializeField] private Sprite fullHeartSprite;
@@ -17,12 +19,18 @@ namespace UIScripts
         [SerializeField] private Image keyImage;
         [SerializeField] private Sprite keySprite;
         [SerializeField] private Sprite emptyKeySprite;
+        
+        [SerializeField] private TMP_Text damageText;
+
+        [SerializeField] private TMP_Text floorText;
 
         void Update()
         {
             UpdateHealth();
             UpdateAmmo();
             UpdateKey();
+            UpdateDamage();
+            UpdateFloor();
         }
 
         private void UpdateHealth()
@@ -55,6 +63,16 @@ namespace UIScripts
             {
                 keyImage.sprite = emptyKeySprite;
             }
+        }
+
+        private void UpdateDamage()
+        {
+            damageText.text = "DMG: " + player.Damage;
+        }
+
+        private void UpdateFloor()
+        {
+            floorText.text = "Floor: " + gameManager.FloorNumber;
         }
     }
 }

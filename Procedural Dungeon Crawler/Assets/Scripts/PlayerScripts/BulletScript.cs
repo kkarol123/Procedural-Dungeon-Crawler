@@ -1,15 +1,21 @@
+using EnemyScripts;
 using UnityEngine;
 
 namespace PlayerScripts
 {
-    public class Bullet : MonoBehaviour
+    public class BulletScript : MonoBehaviour
     {
         [SerializeField] private float bulletSpeed = 12f;
         [SerializeField] private float lifeTime = 2f;
     
         private Rigidbody2D rb;
-        private Vector2 moveDirection;
-    
+        private int damage;
+
+        public void Initialise(int bulletDamage)
+        {
+            damage = bulletDamage;
+        }
+        
         void Start()
         {
             rb = GetComponent<Rigidbody2D>();
@@ -25,7 +31,9 @@ namespace PlayerScripts
             }
             else if (other.CompareTag("Enemy"))
             {
-                //implement
+                EnemyScript enemy = other.GetComponent<EnemyScript>();
+                enemy.TakeDamage(damage);
+                Destroy(gameObject);
             }
         }
     }

@@ -2897,10 +2897,10 @@ TextureImporter:
       name: tileset_127
       rect:
         serializedVersion: 2
-        x: 490
-        y: 236
-        width: 70
-        height: 76
+        x: 495
+        y: 232
+        width: 67
+        height: 74
       alignment: 0
       pivot: {x: 0.5, y: 0.5}
       border: {x: 0, y: 0, z: 0, w: 0}

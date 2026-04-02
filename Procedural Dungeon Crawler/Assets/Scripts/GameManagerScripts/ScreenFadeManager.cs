@@ -56,6 +56,7 @@ namespace GameManagerScripts
         }
         private IEnumerator FadeLoadSceneCoroutine(string sceneName)
         {
+            yield return new WaitForSeconds(3f);
             yield return StartCoroutine(FadeIn());
             SceneManager.LoadScene(sceneName);
             yield return null; //wait a frame for the scene to load

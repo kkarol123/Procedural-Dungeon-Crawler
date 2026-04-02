@@ -15,7 +15,7 @@ namespace PlayerScripts
         [SerializeField] private float rotateSpeed = 20f;
         private bool controlsLocked;
 
-        [SerializeField] private int damage;
+        [SerializeField] private int damage = 1;
         [SerializeField] private Transform gunTip;
         [SerializeField] private GameObject bulletPrefab;
         [SerializeField] int clipSize = 8;
@@ -139,7 +139,9 @@ namespace PlayerScripts
                 if (ammoInClip > 0)
                 {
                     ammoInClip--;
-                    Instantiate(bulletPrefab, gunTip.position, gunTip.rotation);
+                    GameObject bulletObject = Instantiate(bulletPrefab, gunTip.position, gunTip.rotation);
+                    BulletScript bulletScript = bulletObject.GetComponent<BulletScript>();
+                    bulletScript.Initialise(damage);
                 }
             }
         }
@@ -200,7 +202,7 @@ namespace PlayerScripts
         
         
         //Player health
-        private void PlayerTakeDamage()
+        public void PlayerTakeDamage()
         {
             if (!canTakeDamage)
             {
@@ -248,11 +250,12 @@ namespace PlayerScripts
             {
                 return;
             }
-            
+
+            rb.mass = 100000;   //to not allow the enemies from moving the player
             spriteRenderer.sprite = playerDeadSprite;
             LockControls();
 
-            ScreenFadeManager.Instance.FadeLoadScene("DeathScreen");
+            ScreenFadeManager.Instance.FadeLoadScene("DeathScene");
         }
         
         
@@ -321,7 +324,7 @@ namespace PlayerScripts
             health += 1;
         }
 
-        public void IncreaseDamageOutput()
+        public void IncreaseDamage()
         {
             damage += 1;
         }

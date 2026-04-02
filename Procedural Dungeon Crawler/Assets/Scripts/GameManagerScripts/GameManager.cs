@@ -10,11 +10,14 @@ namespace GameManagerScripts
         [SerializeField] private DungeonGenerator dungeonGenerator;
         [SerializeField] private Player player;
         [SerializeField] private Tilemap doorsTilemap;
+
+        [SerializeField] int floorNumber = 1;
+        public int FloorNumber => floorNumber;
         
         private void Start()
         {
             dungeonGenerator.GenerateDungeon();
-            SpawnPlayerAtStartDoor();
+            //SpawnPlayerAtStartDoor();
         }
 
 

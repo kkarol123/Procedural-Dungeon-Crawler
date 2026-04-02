@@ -192,5 +192,10 @@ namespace DungeonLayoutGeneration.Settings
         [SerializeField]
         private TileBase ladderTile;
         public TileBase LadderTile => ladderTile;
+        
+        [FoldoutGroup("Tiles/Secret Room")]
+        [SerializeField]
+        private TileBase signTile;
+        public TileBase SignTile => signTile;
     }
 }

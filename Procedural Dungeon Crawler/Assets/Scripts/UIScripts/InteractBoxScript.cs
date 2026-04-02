@@ -16,6 +16,7 @@ namespace UIScripts
         private SecretWallScript secretWallScript;
         private LadderScript ladderScript;
         private ChestScript chestScript;
+        private SignScript signScript;
         
 
 
@@ -27,6 +28,7 @@ namespace UIScripts
             secretWallScript = GetComponentInParent<SecretWallScript>();
             ladderScript = GetComponentInParent<LadderScript>();
             chestScript = GetComponentInParent<ChestScript>();
+            signScript = GetComponentInParent<SignScript>();
         }
 
 
@@ -67,6 +69,11 @@ namespace UIScripts
                 if (chestScript != null)
                 {
                     chestScript.Interact(player);
+                }
+
+                if (signScript != null)
+                {
+                    signScript.Interact(player);
                 }
             }
         }
