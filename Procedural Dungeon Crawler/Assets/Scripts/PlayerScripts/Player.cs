@@ -50,6 +50,7 @@ namespace PlayerScripts
         public int MaxHealth => maxHealth;
         public int MaxAmmo => maxAmmo;
         public int Damage => damage;
+        public bool ControlsLocked => controlsLocked;
         
         
         
@@ -261,6 +262,11 @@ namespace PlayerScripts
         
         
         //Player key
+        public void GiveKey()
+        {
+            hasKey = true;
+        }
+        
         public void UseKey()
         {
             hasKey = false;

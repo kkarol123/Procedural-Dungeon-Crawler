@@ -197,5 +197,13 @@ namespace DungeonLayoutGeneration.Settings
         [SerializeField]
         private TileBase signTile;
         public TileBase SignTile => signTile;
+        
+        
+        
+        
+        [FoldoutGroup("Tiles/Traps")]
+        [SerializeField]
+        private TileBase arrowLauncherTile;
+        public TileBase ArrowLauncherTile => arrowLauncherTile;
     }
 }

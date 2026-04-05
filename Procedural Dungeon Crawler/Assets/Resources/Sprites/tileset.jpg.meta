@@ -1533,10 +1533,10 @@ TextureImporter:
       name: tileset_65
       rect:
         serializedVersion: 2
-        x: 350
-        y: 464
-        width: 70
-        height: 76
+        x: 353
+        y: 460
+        width: 68
+        height: 73
       alignment: 0
       pivot: {x: 0.5, y: 0.5}
       border: {x: 0, y: 0, z: 0, w: 0}

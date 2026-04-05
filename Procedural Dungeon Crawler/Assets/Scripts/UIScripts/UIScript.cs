@@ -72,7 +72,7 @@ namespace UIScripts
 
         private void UpdateFloor()
         {
-            floorText.text = "Floor: " + gameManager.FloorNumber;
+            floorText.text = "FLOOR: " + gameManager.FloorNumber;
         }
     }
 }

@@ -1,6 +1,7 @@
 using UnityEngine;
 using PlayerScripts;
 using System.Collections;
+using GameManagerScripts;
 
 namespace EnemyScripts
 {
@@ -8,15 +9,16 @@ namespace EnemyScripts
     {
         [SerializeField] int maxHealth;
         private int currentHealth;
+        private bool isDead;
         
-        protected float moveSpeed = 0.8f;
+        protected float moveSpeed = 1.5f;
 
-        protected float detectionRange = 6f;
+        [SerializeField] private float detectionRange = 6f;
         
         protected Player player;
         protected Rigidbody2D rb;
         protected SpriteRenderer spriteRenderer;
-        protected Animator animator;
+        private Animator animator;
 
         [SerializeField] protected Sprite attackSprite;
         [SerializeField] protected float attackSpriteDuration = 0.15f;
@@ -28,7 +30,15 @@ namespace EnemyScripts
 
         private bool canTakeDamage = true;
         private Color originalColor;
-        
+
+        protected int roomIndex;
+        private RoomCombatManager roomCombatManager;
+
+        public void InitialiseEnemy(int roomId, RoomCombatManager roomManager)
+        {
+            roomIndex = roomId;
+            roomCombatManager = roomManager;
+        }
     
         protected virtual void Start()
         {
@@ -55,7 +65,7 @@ namespace EnemyScripts
         
         
         //Movement
-        private void FacePlayer()
+        protected virtual void FacePlayer()
         {
             if (player.transform.position.x < transform.position.x)
             {
@@ -74,7 +84,7 @@ namespace EnemyScripts
 
         protected void MoveTowardsPlayer()
         {
-            Vector2 direction = player.transform.position - transform.position;
+            Vector2 direction = (player.transform.position - transform.position).normalized;
             rb.linearVelocity = direction * moveSpeed;
         }
 
@@ -83,7 +93,7 @@ namespace EnemyScripts
             rb.linearVelocity = Vector2.zero;
         }
 
-        protected void UpdateMovementAnimation()
+        private void UpdateMovementAnimation()
         {
             bool isMoving = rb.linearVelocity.magnitude > 0.01f;
             if (isMoving)
@@ -126,7 +136,7 @@ namespace EnemyScripts
 
         public void TakeDamage(int damage)
         {
-            if (!canTakeDamage)
+            if (!canTakeDamage || isDead)
             {
                 return;
             }
@@ -135,6 +145,9 @@ namespace EnemyScripts
 
             if (currentHealth <= 0)
             {
+                isDead = true;
+                
+                roomCombatManager.NotifyEnemyDied(roomIndex, transform.position);
                 Destroy(gameObject);
                 return;
             }

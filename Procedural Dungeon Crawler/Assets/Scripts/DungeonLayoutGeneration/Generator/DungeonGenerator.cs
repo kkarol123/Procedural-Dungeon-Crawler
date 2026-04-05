@@ -3,7 +3,9 @@ using Sirenix.OdinInspector;
 using UnityEngine.Tilemaps;
 using DungeonLayoutGeneration.Settings;
 using System.Collections.Generic;
+using GameManagerScripts;
 using InteractableScripts;
+using TrapScripts;
 
 namespace DungeonLayoutGeneration.Generator
 {
@@ -74,6 +76,11 @@ namespace DungeonLayoutGeneration.Generator
         [SerializeField] private Tilemap collisionDecorationTilemap; 
         [SerializeField] private Tilemap nonCollisionDecorationTilemap;
         [SerializeField] private Tilemap backgroundTilemap;
+
+        private HashSet<Vector3Int> corridorFloorPositions = new HashSet<Vector3Int>();
+        private HashSet<Vector3Int> trapPositions = new HashSet<Vector3Int>();
+        private List<CorridorArrowDataScript> corridorArrowTraps = new List<CorridorArrowDataScript>();
+        [SerializeField] private GameObject pressurePlatePrefab;
         
         private int numberOfRooms;
         private int distance;
@@ -97,11 +104,10 @@ namespace DungeonLayoutGeneration.Generator
         [SerializeField] private GameObject signPrefab;
 
         private List<EnemySpawnData> enemySpawnPoints = new List<EnemySpawnData>();
-        public List<EnemySpawnData> EnemySpawnPoints => enemySpawnPoints;
         [SerializeField] private GameObject zombieEnemyPrefab;
         [SerializeField] private GameObject skeletonEnemyPrefab;
         [SerializeField] private GameObject spiderEnemyPrefab;
-            
+        private RoomCombatManager roomCombatManager;
             
         
         [Button("Generate Platformer")]
@@ -111,8 +117,8 @@ namespace DungeonLayoutGeneration.Generator
             ResetGrid();
             
             
-            //1. Initialize Random/Seed 
-            System.Random rng = new System.Random(dungeonSettings.Seed);
+            //1. Initialize Random/Seed and Room Combat Manager
+            System.Random rng = Initialise();
             
             //2. Generate Rooms              
             GenerateRooms(rng);
@@ -124,6 +130,10 @@ namespace DungeonLayoutGeneration.Generator
             //4. Add Corridors
             GenerateCorridorFloors();
             GenerateCorridorWalls();
+            
+            //5. Add Traps to the Corridors
+            GenerateCorridorArrowTraps(rng);
+            SpawnCorridorArrowTraps();
             
             //5. Add Floor Variation
             ApplyFloorVariation();
@@ -149,6 +159,18 @@ namespace DungeonLayoutGeneration.Generator
         }
         
 
+        //Initialise
+        private System.Random Initialise()
+        {
+            roomCombatManager = GetComponent<RoomCombatManager>();
+            if (roomCombatManager == null)
+            {
+                roomCombatManager = gameObject.AddComponent<RoomCombatManager>();
+            }
+            
+            return new System.Random(dungeonSettings.Seed);
+        }
+        
         
         
         
@@ -413,6 +435,7 @@ namespace DungeonLayoutGeneration.Generator
                     Vector3Int floorPos = new Vector3Int(x, y + offset, 0); 
                     wallsTilemap.SetTile(floorPos, null);
                     floorsTilemap.SetTile(floorPos, dungeonSettings.DryStoneTile);
+                    corridorFloorPositions.Add(floorPos);
                 } 
             }
         }
@@ -426,6 +449,7 @@ namespace DungeonLayoutGeneration.Generator
                     Vector3Int floorPos = new Vector3Int(x + offset, y, 0);
                     wallsTilemap.SetTile(floorPos, null);
                     floorsTilemap.SetTile(floorPos, dungeonSettings.DryStoneTile);
+                    corridorFloorPositions.Add(floorPos);
                 } 
             }
         }
@@ -709,6 +733,10 @@ namespace DungeonLayoutGeneration.Generator
                     {
                         continue;
                     }
+                    if (IsTrap(pos))
+                    {
+                        continue;
+                    }
 
 
                     if (IsFloorTile(pos))
@@ -817,7 +845,8 @@ namespace DungeonLayoutGeneration.Generator
             TileBase tile = wallsTilemap.GetTile(pos);
 
             return tile == dungeonSettings.WallTile ||
-                   tile == dungeonSettings.SecretWallTile;
+                   tile == dungeonSettings.SecretWallTile ||
+                   tile == dungeonSettings.ArrowLauncherTile;
         }
 
         private bool IsNearWall(Vector3Int pos)
@@ -1080,6 +1109,10 @@ namespace DungeonLayoutGeneration.Generator
                     {
                         continue;
                     }
+                    if (IsTrap(pos))
+                    {
+                        continue;
+                    }
 
                     
                     Vector3 worldPosition = floorsTilemap.CellToWorld(pos);
@@ -1142,7 +1175,10 @@ namespace DungeonLayoutGeneration.Generator
                     Vector3 worldPosition = floorsTilemap.GetCellCenterWorld(chosenPosition);
                     worldPosition.z = -4f;
                     
-                    Instantiate(prefabToSpawn, worldPosition, Quaternion.identity, transform);
+                    GameObject enemyObject = Instantiate(prefabToSpawn, worldPosition, Quaternion.identity, transform);
+                    EnemyScripts.EnemyScript enemyScript = enemyObject.GetComponent<EnemyScripts.EnemyScript>();
+                    enemyScript.InitialiseEnemy(roomIndex, roomCombatManager);
+                    roomCombatManager.InitialiseEnemy(roomIndex);
                 }
             }
         }
@@ -1174,6 +1210,134 @@ namespace DungeonLayoutGeneration.Generator
                     return spiderEnemyPrefab;
             }
         }
+        
+        
+        
+        //Generate traps
+        private void GenerateCorridorArrowTraps(System.Random rng)
+        {
+            foreach (Vector3Int pos in corridorFloorPositions)
+            {
+                if (!IsFloorTile(pos))
+                {
+                    continue;
+                }
+                if (!IsMiddleOfVerticalCorridor(pos) && !IsMiddleOfHorizontalCorridor(pos))
+                {
+                    continue;
+                }
+                if (IsNearDoor(pos))
+                {
+                    continue;
+                }
+                if (collisionDecorationTilemap.HasTile(pos) || nonCollisionDecorationTilemap.HasTile(pos))
+                {
+                    continue;
+                }
+                if (IsTrap(pos))
+                {
+                    continue;
+                }
+                if (rng.NextDouble() > 0.1)
+                {
+                    continue;
+                }
+
+                Vector3Int platePosition = pos;
+                Vector3Int launcherPosition = Vector3Int.zero;
+                Vector2Int fireDirection = Vector2Int.zero;
+
+                if (IsMiddleOfVerticalCorridor(platePosition))
+                {
+                    bool shootFromLeftWall = rng.Next(0, 2) == 0;
+
+                    if (shootFromLeftWall)
+                    {
+                        launcherPosition = platePosition + Vector3Int.left * 2;
+                        fireDirection = Vector2Int.right;
+                    }
+                    else
+                    {
+                        launcherPosition = platePosition + Vector3Int.right * 2;
+                        fireDirection = Vector2Int.left;
+                    }
+                }
+                else if (IsMiddleOfHorizontalCorridor(platePosition))
+                {
+                    bool shootFromTopWall = rng.Next(0, 2) == 0;
+
+                    if (shootFromTopWall)
+                    {
+                        launcherPosition = platePosition + Vector3Int.up * 2;
+                        fireDirection = Vector2Int.down;
+                    }
+                    else
+                    {
+                        launcherPosition = platePosition + Vector3Int.down * 2;
+                        fireDirection = Vector2Int.up;
+                    }
+                }
+
+                if (!IsWallTile(launcherPosition))
+                {
+                    continue;
+                }
+
+                if (IsTrap(launcherPosition))
+                {
+                    continue;
+                }
+                
+                corridorArrowTraps.Add(new CorridorArrowDataScript(platePosition, launcherPosition, fireDirection));
+                
+                trapPositions.Add(platePosition);
+                trapPositions.Add(launcherPosition);
+            }
+        }
+        
+        private bool IsCorridorFloor(Vector3Int pos)
+        {
+            return corridorFloorPositions.Contains(pos);
+        }
+
+        private bool IsMiddleOfHorizontalCorridor(Vector3Int pos)
+        {
+            return IsCorridorFloor(pos + Vector3Int.left) &&
+                   IsCorridorFloor(pos + Vector3Int.right) &&
+                   IsWallTile(pos + Vector3Int.up * 2) &&
+                   IsWallTile(pos + Vector3Int.down * 2);
+        }
+
+        private bool IsMiddleOfVerticalCorridor(Vector3Int pos)
+        {
+            return IsCorridorFloor(pos + Vector3Int.up) &&
+                   IsCorridorFloor(pos + Vector3Int.down) &&
+                   IsWallTile(pos + Vector3Int.left * 2) &&
+                   IsWallTile(pos + Vector3Int.right * 2);
+        }
+        
+        private bool IsTrap(Vector3Int pos)
+        {
+            return trapPositions.Contains(pos);
+        }
+
+        private void SpawnCorridorArrowTraps()
+        {
+            foreach (CorridorArrowDataScript trap in corridorArrowTraps)
+            {
+                wallsTilemap.SetTile(trap.launcherPosition, dungeonSettings.ArrowLauncherTile);
+                
+                Vector3 plateWorldPosition = floorsTilemap.GetCellCenterWorld(trap.platePosition);
+                plateWorldPosition.z = -4f;
+                
+                GameObject pressurePlateObject = Instantiate(pressurePlatePrefab, plateWorldPosition, Quaternion.identity, transform);
+                
+                PressurePlateTrap pressurePlateTrap = pressurePlateObject.GetComponent<PressurePlateTrap>();
+                pressurePlateTrap.InitialiseTrap(trap.launcherPosition, trap.fireDirection);
+            }
+        }
+        
+        
         
         
         
@@ -1215,6 +1379,9 @@ namespace DungeonLayoutGeneration.Generator
             
             rooms.Clear(); 
             enemySpawnPoints.Clear();
+            corridorFloorPositions.Clear();
+            trapPositions.Clear();
+            corridorArrowTraps.Clear();
             
             //destroy the old spawned gameobjects
             for (int i = transform.childCount - 1; i >= 0; i--)
