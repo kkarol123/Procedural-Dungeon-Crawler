@@ -10,11 +10,6 @@ namespace DungeonLayoutGeneration.Settings
         //Fixed Constraints
         [FoldoutGroup("Fixed Constraints")] 
         [SerializeField]
-        private int seed = 12345;
-        public int Seed => seed;
-        
-        [FoldoutGroup("Fixed Constraints")] 
-        [SerializeField]
         private float noiseScale = 0.1f;
         public float NoiseScale => noiseScale;
         
@@ -23,6 +18,15 @@ namespace DungeonLayoutGeneration.Settings
         
     
         //Randomised Constraints
+        [FoldoutGroup("Randomised Constraints")] 
+        [SerializeField]
+        private int seed = 12345;
+        public int Seed
+        {
+            get => seed;
+            set => seed = value;
+        } 
+        
         [FoldoutGroup("Randomised Constraints")] 
         [SerializeField]
         private int minRooms = 2;
@@ -203,7 +207,7 @@ namespace DungeonLayoutGeneration.Settings
         
         [FoldoutGroup("Tiles/Traps")]
         [SerializeField]
-        private TileBase arrowLauncherTile;
-        public TileBase ArrowLauncherTile => arrowLauncherTile;
+        private TileBase trapLauncherTile;
+        public TileBase TrapLauncherTile => trapLauncherTile;
     }
 }

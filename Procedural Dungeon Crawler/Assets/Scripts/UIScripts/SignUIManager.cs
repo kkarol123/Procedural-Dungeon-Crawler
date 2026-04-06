@@ -41,7 +41,7 @@ namespace UIScripts
             player.LockControls();
             
             signOpen = true;
-            signText.text = "There is a hidden secret along the walls of this room...\n\nPress ESC to exit...";
+            signText.text = "THERE IS A HIDDEN SECRET ALONG THE WALLS OF THIS ROOM...\n\nPRESS ESC TO EXIT...";
             signPanel.SetActive(true);
         }
 

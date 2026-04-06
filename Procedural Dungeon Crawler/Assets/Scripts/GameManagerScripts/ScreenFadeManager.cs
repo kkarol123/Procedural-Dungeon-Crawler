@@ -11,7 +11,10 @@ namespace GameManagerScripts
         public static ScreenFadeManager Instance { get; private set; }
 
         [SerializeField] private Image blackScreen;
+        [SerializeField] private Canvas fadeCanvas;
         [SerializeField] private float fadeSpeed = 2f;
+        
+        private GameManager gameManager;
         
         private void Awake()
         {
@@ -24,9 +27,27 @@ namespace GameManagerScripts
             Instance = this;
             DontDestroyOnLoad(gameObject);
 
+            SceneManager.sceneLoaded += OnSceneLoaded;
+
             Color color = blackScreen.color;
             color.a = 0f;
             blackScreen.color = color;
+            
+            gameManager = FindFirstObjectByType<GameManager>();
+        }
+        
+        private void OnDestroy()
+        {
+            if (Instance == this)
+            {
+                SceneManager.sceneLoaded -= OnSceneLoaded;
+            }
+        }
+
+        private void OnSceneLoaded(Scene scene, LoadSceneMode mode)
+        {
+            gameManager = FindFirstObjectByType<GameManager>();
+            fadeCanvas.sortingOrder = 999;
         }
 
         
@@ -39,6 +60,11 @@ namespace GameManagerScripts
         public void FadeLoadScene(string sceneName)
         {
             StartCoroutine(FadeLoadSceneCoroutine(sceneName));
+        }
+
+        public void FadeNextFloor()
+        {
+            StartCoroutine(FadeNextFloorCoroutine());
         }
             
 
@@ -56,13 +82,20 @@ namespace GameManagerScripts
         }
         private IEnumerator FadeLoadSceneCoroutine(string sceneName)
         {
-            yield return new WaitForSeconds(3f);
             yield return StartCoroutine(FadeIn());
+            
             SceneManager.LoadScene(sceneName);
-            yield return null; //wait a frame for the scene to load
+            fadeCanvas.sortingOrder = 999;
+            
+            yield return new WaitForSeconds(1f); //wait a bit for the scene to fully load
             yield return StartCoroutine(FadeOut());
         }
-
+        private IEnumerator FadeNextFloorCoroutine()
+        {
+            yield return StartCoroutine(FadeIn());
+            gameManager.LoadNextFloor();
+            yield return StartCoroutine(FadeOut());
+        }
         
         
         

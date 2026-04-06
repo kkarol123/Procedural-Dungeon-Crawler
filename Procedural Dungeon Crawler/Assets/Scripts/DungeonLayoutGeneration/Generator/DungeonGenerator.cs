@@ -5,7 +5,9 @@ using DungeonLayoutGeneration.Settings;
 using System.Collections.Generic;
 using GameManagerScripts;
 using InteractableScripts;
-using TrapScripts;
+using CorridorTrapScripts.ArrowTrap;
+using CorridorTrapScripts.FlameJetsTrap;
+using CorridorTrapScripts.SpikesTrap;
 
 namespace DungeonLayoutGeneration.Generator
 {
@@ -21,6 +23,13 @@ namespace DungeonLayoutGeneration.Generator
         Ruined,
         Flooded,
         Volcanic
+    }
+
+    public enum CorridorTrapType
+    {
+        PressurePlateArrow,
+        FlameJet,
+        Spikes
     }
 
     [System.Serializable]
@@ -79,8 +88,13 @@ namespace DungeonLayoutGeneration.Generator
 
         private HashSet<Vector3Int> corridorFloorPositions = new HashSet<Vector3Int>();
         private HashSet<Vector3Int> trapPositions = new HashSet<Vector3Int>();
-        private List<CorridorArrowDataScript> corridorArrowTraps = new List<CorridorArrowDataScript>();
+        private List<CorridorArrowData> corridorArrowTraps = new List<CorridorArrowData>();
         [SerializeField] private GameObject pressurePlatePrefab;
+        private List<SpikesData> spikesTraps = new List<SpikesData>();
+        [SerializeField] private GameObject spikesTrapPrefab;
+        private List<FlameJetData> flameJetsTraps = new List<FlameJetData>();
+        [SerializeField] private GameObject flameJetPrefab;
+        
         
         private int numberOfRooms;
         private int distance;
@@ -102,13 +116,19 @@ namespace DungeonLayoutGeneration.Generator
         [SerializeField] private GameObject secretWallPrefab;
         [SerializeField] private GameObject ladderPrefab;
         [SerializeField] private GameObject signPrefab;
+        [SerializeField] private GameObject exitDoorPrefab;
 
         private List<EnemySpawnData> enemySpawnPoints = new List<EnemySpawnData>();
         [SerializeField] private GameObject zombieEnemyPrefab;
         [SerializeField] private GameObject skeletonEnemyPrefab;
         [SerializeField] private GameObject spiderEnemyPrefab;
-        private RoomCombatManager roomCombatManager;
-            
+        [SerializeField] RoomCombatManager roomCombatManager;
+
+
+        public void SetSeed(int newSeed)
+        {
+            dungeonSettings.Seed = newSeed;
+        }
         
         [Button("Generate Platformer")]
         public void GenerateDungeon()
@@ -118,7 +138,8 @@ namespace DungeonLayoutGeneration.Generator
             
             
             //1. Initialize Random/Seed and Room Combat Manager
-            System.Random rng = Initialise();
+            System.Random rng = new System.Random(dungeonSettings.Seed);
+            roomCombatManager.ResetRoomData();
             
             //2. Generate Rooms              
             GenerateRooms(rng);
@@ -132,8 +153,10 @@ namespace DungeonLayoutGeneration.Generator
             GenerateCorridorWalls();
             
             //5. Add Traps to the Corridors
-            GenerateCorridorArrowTraps(rng);
-            SpawnCorridorArrowTraps();
+            GenerateCorridorTraps(rng);
+            SpawnArrowTraps();
+            SpawnSpikesTraps();
+            SpawnFlameJetsTraps();
             
             //5. Add Floor Variation
             ApplyFloorVariation();
@@ -158,18 +181,7 @@ namespace DungeonLayoutGeneration.Generator
             ApplyBackgroundTiles();
         }
         
-
-        //Initialise
-        private System.Random Initialise()
-        {
-            roomCombatManager = GetComponent<RoomCombatManager>();
-            if (roomCombatManager == null)
-            {
-                roomCombatManager = gameObject.AddComponent<RoomCombatManager>();
-            }
-            
-            return new System.Random(dungeonSettings.Seed);
-        }
+        
         
         
         
@@ -400,6 +412,10 @@ namespace DungeonLayoutGeneration.Generator
             
             Vector3Int doorPos = new Vector3Int(endRoomCenter.x, endRoomCenter.y + endRoomHeight / 2, 0);
             doorsTilemap.SetTile(doorPos, dungeonSettings.ExitDoorTile);
+
+            Vector3 worldPosition = doorsTilemap.GetCellCenterWorld(doorPos);
+            worldPosition.z = -4f;
+            Instantiate(exitDoorPrefab, worldPosition, Quaternion.identity, transform);
             
             rooms.Insert(rooms.Count, new RoomData(endRoomCenter, endRoomWidth, endRoomHeight, BiomeType.Volcanic));
         }
@@ -558,8 +574,8 @@ namespace DungeonLayoutGeneration.Generator
         {
             BoundsInt bounds = wallsTilemap.cellBounds;
 
-            float offsetX = dungeonSettings.Seed * 0.67f;
-            float offsetY = dungeonSettings.Seed * 0.69f;
+            float offsetX = (dungeonSettings.Seed % 10000) * 0.67f;
+            float offsetY = (dungeonSettings.Seed % 10000) * 0.69f;
 
             for (int x = bounds.xMin; x < bounds.xMax; x++)
             {
@@ -846,7 +862,7 @@ namespace DungeonLayoutGeneration.Generator
 
             return tile == dungeonSettings.WallTile ||
                    tile == dungeonSettings.SecretWallTile ||
-                   tile == dungeonSettings.ArrowLauncherTile;
+                   tile == dungeonSettings.TrapLauncherTile;
         }
 
         private bool IsNearWall(Vector3Int pos)
@@ -1120,12 +1136,12 @@ namespace DungeonLayoutGeneration.Generator
                     worldPosition.y += 0.5f;
                     worldPosition.z -= 4f;
                     double spawnChance = rng.NextDouble();
-                    if (spawnChance < 0.0025)
+                    if (spawnChance < 0.0075)
                     {
                         Instantiate(medkitPickupPrefab, worldPosition, Quaternion.identity, transform);
                         continue;
                     }
-                    if (spawnChance < 0.015)
+                    if (spawnChance < 0.025)
                     {
                         Instantiate(ammoPickupPrefab, worldPosition, Quaternion.identity, transform);
                     }
@@ -1214,84 +1230,180 @@ namespace DungeonLayoutGeneration.Generator
         
         
         //Generate traps
-        private void GenerateCorridorArrowTraps(System.Random rng)
+        private void GenerateCorridorTraps(System.Random rng)
         {
-            foreach (Vector3Int pos in corridorFloorPositions)
+            corridorArrowTraps.Clear();
+            spikesTraps.Clear();
+            flameJetsTraps.Clear();
+
+            for (int i = 0; i < rooms.Count - 1; i++)
             {
-                if (!IsFloorTile(pos))
-                {
-                    continue;
-                }
-                if (!IsMiddleOfVerticalCorridor(pos) && !IsMiddleOfHorizontalCorridor(pos))
-                {
-                    continue;
-                }
-                if (IsNearDoor(pos))
-                {
-                    continue;
-                }
-                if (collisionDecorationTilemap.HasTile(pos) || nonCollisionDecorationTilemap.HasTile(pos))
-                {
-                    continue;
-                }
-                if (IsTrap(pos))
-                {
-                    continue;
-                }
-                if (rng.NextDouble() > 0.1)
-                {
-                    continue;
-                }
-
-                Vector3Int platePosition = pos;
-                Vector3Int launcherPosition = Vector3Int.zero;
-                Vector2Int fireDirection = Vector2Int.zero;
-
-                if (IsMiddleOfVerticalCorridor(platePosition))
-                {
-                    bool shootFromLeftWall = rng.Next(0, 2) == 0;
-
-                    if (shootFromLeftWall)
-                    {
-                        launcherPosition = platePosition + Vector3Int.left * 2;
-                        fireDirection = Vector2Int.right;
-                    }
-                    else
-                    {
-                        launcherPosition = platePosition + Vector3Int.right * 2;
-                        fireDirection = Vector2Int.left;
-                    }
-                }
-                else if (IsMiddleOfHorizontalCorridor(platePosition))
-                {
-                    bool shootFromTopWall = rng.Next(0, 2) == 0;
-
-                    if (shootFromTopWall)
-                    {
-                        launcherPosition = platePosition + Vector3Int.up * 2;
-                        fireDirection = Vector2Int.down;
-                    }
-                    else
-                    {
-                        launcherPosition = platePosition + Vector3Int.down * 2;
-                        fireDirection = Vector2Int.up;
-                    }
-                }
-
-                if (!IsWallTile(launcherPosition))
-                {
-                    continue;
-                }
-
-                if (IsTrap(launcherPosition))
-                {
-                    continue;
-                }
+                RoomData startRoom = rooms[i];
+                RoomData endRoom = rooms[i + 1];
                 
-                corridorArrowTraps.Add(new CorridorArrowDataScript(platePosition, launcherPosition, fireDirection));
+                Vector3Int start = startRoom.center;
+                Vector3Int end = endRoom.center;
                 
-                trapPositions.Add(platePosition);
-                trapPositions.Add(launcherPosition);
+                List <Vector3Int> validPositions = new List<Vector3Int>();
+
+                for (int x = Mathf.Min(start.x, end.x); x <= Mathf.Max(start.x, end.x); x++)
+                {
+                    for (int offset = -1; offset <= 1; offset++)
+                    {
+                        Vector3Int pos = new Vector3Int(x, start.y + offset, 0);
+                        
+                        if (!IsFloorTile(pos))
+                        {
+                            continue;
+                        }
+                        if (!IsCorridorFloor(pos))
+                        {
+                            continue;
+                        }
+                        if (GetRoomAtPosition(pos) != null)
+                        {
+                            continue;
+                        }
+                        if (IsNearDoor(pos))
+                        {
+                            continue;
+                        }
+                        if (collisionDecorationTilemap.HasTile(pos) || nonCollisionDecorationTilemap.HasTile(pos))
+                        {
+                            continue;
+                        }
+                        if (IsTrap(pos))
+                        {
+                            continue;
+                        }
+                        if (validPositions.Contains(pos))
+                        {
+                            continue;
+                        }
+                        
+                        validPositions.Add(pos);
+                    }
+                }
+                for (int y = Mathf.Min(start.y, end.y); y <= Mathf.Max(start.y, end.y); y++)
+                {
+                    for (int offset = -1; offset <= 1; offset++)
+                    {
+                        Vector3Int pos = new Vector3Int(end.x + offset, y, 0);
+
+                        if (!IsFloorTile(pos))
+                        {
+                            continue;
+                        }
+                        if (!IsMiddleOfVerticalCorridor(pos) && !IsMiddleOfHorizontalCorridor(pos))
+                        {
+                            continue;
+                        }
+                        if (GetRoomAtPosition(pos) != null)
+                        {
+                            continue;
+                        }
+                        if (IsNearDoor(pos))
+                        {
+                            continue;
+                        }
+                        if (collisionDecorationTilemap.HasTile(pos) || nonCollisionDecorationTilemap.HasTile(pos))
+                        {
+                            continue;
+                        }
+                        if (IsTrap(pos))
+                        {
+                            continue;
+                        }
+                        if (validPositions.Contains(pos))
+                        {
+                            continue;
+                        }
+
+                        validPositions.Add(pos);
+                    }
+                }
+
+                int trapCount = 2;
+                if (validPositions.Count >= 12)
+                {
+                    trapCount = 3;
+                }
+                if (validPositions.Count >= 22)
+                {
+                    trapCount = 4;
+                }
+
+                for (int trapIndex = 0; trapIndex < trapCount; trapIndex++)
+                {
+                    int randomIndex = rng.Next(validPositions.Count);
+                    Vector3Int chosenPosition = validPositions[randomIndex];
+                    validPositions.RemoveAt(randomIndex);
+                    
+                    CorridorTrapType trapType = (CorridorTrapType)rng.Next(0, 3);
+
+                    if (trapType == CorridorTrapType.Spikes)
+                    {
+                        spikesTraps.Add(new SpikesData(chosenPosition));
+                        trapPositions.Add(chosenPosition);
+                        continue;
+                    }
+
+                    Vector3Int wallTrapPosition = Vector3Int.zero;
+                    Vector2Int trapDirection = Vector2Int.zero;
+
+                    if (IsMiddleOfVerticalCorridor(chosenPosition))
+                    {
+                        bool useLeftWall = rng.Next(0, 2) == 0;
+
+                        if (useLeftWall)
+                        {
+                            wallTrapPosition = chosenPosition + Vector3Int.left * 2;
+                            trapDirection = Vector2Int.right;
+                        }
+                        else
+                        {
+                            wallTrapPosition = chosenPosition + Vector3Int.right * 2;
+                            trapDirection = Vector2Int.left;
+                        }
+                    }
+                    else if (IsMiddleOfHorizontalCorridor(chosenPosition))
+                    {
+                        bool useTopWall = rng.Next(0, 2) == 0;
+
+                        if (useTopWall)
+                        {
+                            wallTrapPosition = chosenPosition + Vector3Int.up * 2;
+                            trapDirection = Vector2Int.down;
+                        }
+                        else
+                        {
+                            wallTrapPosition = chosenPosition + Vector3Int.down * 2;
+                            trapDirection = Vector2Int.up;
+                        }
+                    }
+
+                    if (!IsWallTile(wallTrapPosition) || IsTrap(wallTrapPosition))
+                    {
+                        spikesTraps.Add(new SpikesData(chosenPosition));
+                        trapPositions.Add(chosenPosition);
+                        continue;
+                    }
+
+                    if (trapType == CorridorTrapType.PressurePlateArrow)
+                    {
+                        corridorArrowTraps.Add(new CorridorArrowData(chosenPosition, wallTrapPosition, trapDirection));
+                        trapPositions.Add(chosenPosition);
+                        trapPositions.Add(wallTrapPosition);
+                    }
+                    else  //flame jets
+                    {
+                        flameJetsTraps.Add(new FlameJetData(wallTrapPosition, trapDirection));
+                        trapPositions.Add(wallTrapPosition);
+                        
+                        Vector3Int flameFrontTile = wallTrapPosition + new Vector3Int(trapDirection.x, trapDirection.y, 0);
+                        trapPositions.Add(flameFrontTile);
+                    }
+                }
             }
         }
         
@@ -1320,12 +1432,24 @@ namespace DungeonLayoutGeneration.Generator
         {
             return trapPositions.Contains(pos);
         }
-
-        private void SpawnCorridorArrowTraps()
+        
+        
+        
+        private void SpawnSpikesTraps()
         {
-            foreach (CorridorArrowDataScript trap in corridorArrowTraps)
+            foreach (SpikesData trap in spikesTraps)
             {
-                wallsTilemap.SetTile(trap.launcherPosition, dungeonSettings.ArrowLauncherTile);
+                Vector3 worldPosition = floorsTilemap.GetCellCenterWorld(trap.spikePosition);
+                worldPosition.z = -4f;
+                Instantiate(spikesTrapPrefab, worldPosition, Quaternion.identity, transform);
+            }
+        }
+
+        private void SpawnArrowTraps()
+        {
+            foreach (CorridorArrowData trap in corridorArrowTraps)
+            {
+                wallsTilemap.SetTile(trap.launcherPosition, dungeonSettings.TrapLauncherTile);
                 
                 Vector3 plateWorldPosition = floorsTilemap.GetCellCenterWorld(trap.platePosition);
                 plateWorldPosition.z = -4f;
@@ -1336,7 +1460,41 @@ namespace DungeonLayoutGeneration.Generator
                 pressurePlateTrap.InitialiseTrap(trap.launcherPosition, trap.fireDirection);
             }
         }
-        
+
+        private void SpawnFlameJetsTraps()
+        {
+            foreach (FlameJetData trap in flameJetsTraps)
+            {
+                wallsTilemap.SetTile(trap.flamePosition, dungeonSettings.TrapLauncherTile);
+                
+                Vector3 worldPosition = wallsTilemap.GetCellCenterWorld(trap.flamePosition);
+                worldPosition.z = -4f;
+                
+                GameObject flameJetObject = Instantiate(flameJetPrefab, worldPosition, Quaternion.identity, transform);
+                float angle = 0f;
+
+                if (trap.flameDirection == Vector2Int.right)
+                {
+                    angle = 0f;
+                }
+                else if (trap.flameDirection == Vector2Int.up)
+                {
+                    angle = 90f;
+                }
+                else if (trap.flameDirection == Vector2Int.left)
+                {
+                    angle = 180f;
+                    SpriteRenderer spriteRenderer = flameJetObject.GetComponentInChildren<SpriteRenderer>();
+                    spriteRenderer.flipY = true;
+                }
+                else if (trap.flameDirection == Vector2Int.down)
+                {
+                    angle = -90f;
+                }
+
+                flameJetObject.transform.rotation = Quaternion.Euler(0f, 0f, angle);
+            }
+        }
         
         
         
@@ -1381,12 +1539,21 @@ namespace DungeonLayoutGeneration.Generator
             enemySpawnPoints.Clear();
             corridorFloorPositions.Clear();
             trapPositions.Clear();
+            spikesTraps.Clear();
             corridorArrowTraps.Clear();
+            flameJetsTraps.Clear();
             
             //destroy the old spawned gameobjects
             for (int i = transform.childCount - 1; i >= 0; i--)
             {
-                DestroyImmediate(transform.GetChild(i).gameObject);
+                if (Application.isPlaying)
+                {
+                    Destroy(transform.GetChild(i).gameObject);
+                }
+                else
+                {
+                    DestroyImmediate(transform.GetChild(i).gameObject);
+                }
             }
         }
     }

@@ -159,7 +159,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   maxHealth: 4
-  detectionRange: 11
+  detectionRange: 10
   attackSprite: {fileID: 827538889749247048, guid: b37d81cc8e3efd84aaef888da452f021, type: 3}
   attackSpriteDuration: 0.15
   damageCooldown: 0.1

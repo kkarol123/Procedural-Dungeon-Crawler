@@ -193,3 +193,4 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 602211983ca98fc45b3bcc7a02df9e71, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  chestRewardManager: {fileID: 0}

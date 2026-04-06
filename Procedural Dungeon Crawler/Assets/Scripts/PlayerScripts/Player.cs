@@ -256,6 +256,12 @@ namespace PlayerScripts
             spriteRenderer.sprite = playerDeadSprite;
             LockControls();
 
+            StartCoroutine(LoadDeathScene());
+        }
+
+        private IEnumerator LoadDeathScene()
+        {
+            yield return new WaitForSeconds(3f);
             ScreenFadeManager.Instance.FadeLoadScene("DeathScene");
         }
         

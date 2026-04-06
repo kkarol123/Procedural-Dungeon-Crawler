@@ -34,5 +34,11 @@ namespace GameManagerScripts
                 Instantiate(key, keySpawnPosition, Quaternion.identity);
             }
         }
+
+        public void ResetRoomData()
+        {
+            enemiesRemainingPerRoom.Clear();
+            clearedRooms.Clear();
+        }
     }
 }

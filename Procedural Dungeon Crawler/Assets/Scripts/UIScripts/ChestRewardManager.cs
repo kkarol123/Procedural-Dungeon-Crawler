@@ -55,10 +55,10 @@ namespace UIScripts
             
             rewardPanel.SetActive(true);
             rewardText.text =
-                "Choose a reward\n\n" +
-                "1 - Increase Max Ammo \n" +
-                "2 - Increase Max Health \n" +
-                "3 - Increase Damage";
+                "CHOOSE A REWARD\n\n" +
+                "1 - INCREASE MAX AMMO \n" +
+                "2 - INCREASE MAX HEALTH \n" +
+                "3 - INCREASE DAMAGE";
         }
 
         private void CloseReward()

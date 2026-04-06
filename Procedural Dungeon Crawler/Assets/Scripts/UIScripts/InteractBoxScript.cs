@@ -18,6 +18,7 @@ namespace UIScripts
         private ChestScript chestScript;
         private SignScript signScript;
         private KeyScript keyScript;
+        private ExitDoorScript exitDoorScript;
         
 
 
@@ -31,6 +32,7 @@ namespace UIScripts
             chestScript = GetComponentInParent<ChestScript>();
             signScript = GetComponentInParent<SignScript>();
             keyScript = GetComponentInParent<KeyScript>();
+            exitDoorScript = GetComponentInParent<ExitDoorScript>();
         }
 
 
@@ -71,16 +73,24 @@ namespace UIScripts
                 if (chestScript != null)
                 {
                     chestScript.Interact(player);
+                    return;
                 }
 
                 if (signScript != null)
                 {
                     signScript.Interact(player);
+                    return;
                 }
 
                 if (keyScript != null)
                 {
                     keyScript.Interact(player);
+                    return;
+                }
+
+                if (exitDoorScript != null)
+                {
+                    exitDoorScript.Interact();
                 }
             }
         }
