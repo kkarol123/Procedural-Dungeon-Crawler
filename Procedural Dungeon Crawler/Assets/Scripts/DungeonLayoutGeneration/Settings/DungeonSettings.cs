@@ -73,11 +73,6 @@ namespace DungeonLayoutGeneration.Settings
         
         
         //Tiles
-        [FoldoutGroup("Tiles")]
-        [SerializeField]
-        private TileBase wallTile;
-        public TileBase WallTile => wallTile;
-        
         [FoldoutGroup("Tiles")] 
         [SerializeField]
         private TileBase doorTile;
@@ -92,6 +87,55 @@ namespace DungeonLayoutGeneration.Settings
         [SerializeField]
         private TileBase backgroundTile;
         public TileBase BackgroundTile => backgroundTile;
+        
+        
+        
+        [FoldoutGroup("Tiles/All Wall Tiles")]
+        [SerializeField]
+        private TileBase topWallTile;
+        public TileBase TopWallTile => topWallTile;
+        
+        [FoldoutGroup("Tiles/All Wall Tiles")]
+        [SerializeField]
+        private TileBase leftSideWallTile;
+        public TileBase LeftSideWallTile => leftSideWallTile;
+        
+        [FoldoutGroup("Tiles/All Wall Tiles")]
+        [SerializeField]
+        private TileBase rightSideWallTile;
+        public TileBase RightSideWallTile => rightSideWallTile;
+        
+        [FoldoutGroup("Tiles/All Wall Tiles")]
+        [SerializeField]
+        private TileBase bottomWallTile;
+        public TileBase BottomWallTile => bottomWallTile;
+        
+        
+        
+        
+        
+        
+        [FoldoutGroup("Tiles/All Corner Tiles")] 
+        [SerializeField]
+        private TileBase topLeftCornerWallTile;
+        public TileBase TopLeftCornerWallTile => topLeftCornerWallTile;
+        
+        [FoldoutGroup("Tiles/All Corner Tiles")] 
+        [SerializeField]
+        private TileBase topRightCornerWallTile;
+        public TileBase TopRightCornerWallTile => topRightCornerWallTile;
+        
+        [FoldoutGroup("Tiles/All Corner Tiles")] 
+        [SerializeField]
+        private TileBase bottomLeftCornerWallTile;
+        public TileBase BottomLeftCornerWallTile => bottomLeftCornerWallTile;
+        
+        [FoldoutGroup("Tiles/All Corner Tiles")] 
+        [SerializeField]
+        private TileBase bottomRightCornerWallTile;
+        public TileBase BottomRightCornerWallTile => bottomRightCornerWallTile;
+        
+        
         
         
         
@@ -129,8 +173,8 @@ namespace DungeonLayoutGeneration.Settings
         
         [FoldoutGroup("Tiles/Volcanic Biome Tiles")] 
         [SerializeField]
-        private TileBase volanicRubbleTile;
-        public TileBase VolanicRubbleTile => volanicRubbleTile;
+        private TileBase volcanicRubbleTile;
+        public TileBase VolcanicRubbleTile => volcanicRubbleTile;
         
         [FoldoutGroup("Tiles/Volcanic Biome Tiles")] 
         [SerializeField]
@@ -209,5 +253,28 @@ namespace DungeonLayoutGeneration.Settings
         [SerializeField]
         private TileBase trapLauncherTile;
         public TileBase TrapLauncherTile => trapLauncherTile;
+
+
+
+
+        [FoldoutGroup("Tiles/Vegetation & Organic Growth")] 
+        [SerializeField]
+        private TileBase vineTile;
+        public TileBase VineTile => vineTile;
+        
+        [FoldoutGroup("Tiles/Vegetation & Organic Growth")]
+        [SerializeField]
+        private TileBase mushroomTile;
+        public TileBase MushroomTile => mushroomTile;
+        
+        [FoldoutGroup("Tiles/Vegetation & Organic Growth")]
+        [SerializeField]
+        private TileBase treeStumpTile;
+        public TileBase TreeStumpTile => treeStumpTile;
+
+        [FoldoutGroup("Tiles/Vegetation & Organic Growth")]
+        [SerializeField]
+        private TileBase fossilTile;
+        public TileBase FossilTile => fossilTile;
     }
 }

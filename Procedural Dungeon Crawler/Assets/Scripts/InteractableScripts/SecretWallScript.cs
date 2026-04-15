@@ -6,7 +6,7 @@ namespace InteractableScripts
     public class SecretWallScript : MonoBehaviour
     {
         private Tilemap wallsTilemap;
-        private Tilemap collisionDecorationTilemap;
+        private Tilemap ladderTilemap;
 
         private Vector3Int wallPosition;
 
@@ -14,10 +14,10 @@ namespace InteractableScripts
         private GameObject ladderPrefab;
         private Vector3 ladderTeleportDestination;
 
-        public void InitialiseSecretWall(Tilemap wallsMap, Tilemap collisionDecorationMap, Vector3Int pos, TileBase ladderTileToPlace, GameObject ladderObjectPrefab, Vector3 teleportDestination)
+        public void InitialiseSecretWall(Tilemap wallsMap, Tilemap ladderMap, Vector3Int pos, TileBase ladderTileToPlace, GameObject ladderObjectPrefab, Vector3 teleportDestination)
         {
             wallsTilemap = wallsMap;
-            collisionDecorationTilemap = collisionDecorationMap;
+            ladderTilemap = ladderMap;
             wallPosition = pos;
             ladderTile = ladderTileToPlace;
             ladderPrefab = ladderObjectPrefab;
@@ -26,7 +26,7 @@ namespace InteractableScripts
 
         public void Interact()
         {
-            collisionDecorationTilemap.SetTile(wallPosition, ladderTile);
+            ladderTilemap.SetTile(wallPosition, ladderTile);
             
             Vector3 worldPosition = wallsTilemap.GetCellCenterWorld(wallPosition);
             GameObject ladderObject = Instantiate(ladderPrefab, worldPosition, Quaternion.identity, transform.parent);

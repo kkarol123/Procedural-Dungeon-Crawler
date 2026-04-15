@@ -1,6 +1,8 @@
+using System;
 using UnityEngine;
 using System.Collections;
 using DungeonLayoutGeneration.Settings;
+using EnemyScripts;
 using GameManagerScripts;
 using UnityEngine.Tilemaps;
 
@@ -40,6 +42,12 @@ namespace PlayerScripts
         [SerializeField] private float lavaSpeedMultiplier = 0.8f;
         private float currentWalkSpeed;
         
+        [SerializeField] private PlayerTargetDetector targetDetector;
+        [SerializeField] private GameObject crosshairPrefab;
+
+        private EnemyScript currentTarget;
+        private GameObject currentCrosshair;
+        
         
         
         public int Health => health;
@@ -47,10 +55,7 @@ namespace PlayerScripts
         public int AmmoInReserve => ammoInReserve;
         public bool IsReloading => isReloading;
         public bool HasKey => hasKey;
-        public int MaxHealth => maxHealth;
-        public int MaxAmmo => maxAmmo;
         public int Damage => damage;
-        public bool ControlsLocked => controlsLocked;
         
         
         
@@ -64,6 +69,7 @@ namespace PlayerScripts
         void Update()
         {
             CheckForEnvironmentEffects();
+            UpdateCurrentTarget();
             
             PlayerMovement();
             PlayerRotate();
@@ -109,11 +115,20 @@ namespace PlayerScripts
             {
                 return;
             }
-            
-            Vector3 mousePos = Camera.main.ScreenToWorldPoint(Input.mousePosition);
-            mousePos.z = 0f;
 
-            Vector2 direction = mousePos - transform.position;
+            Vector3 targetPosition;
+            if (currentTarget != null)
+            {
+                targetPosition = currentTarget.transform.position;
+            }
+            else
+            {
+                targetPosition = Camera.main.ScreenToWorldPoint(Input.mousePosition);
+                targetPosition.z = 0f;
+            }
+            
+            Vector2 direction = targetPosition - transform.position;
+            
             if (direction.sqrMagnitude < 0.1f)    //if the mouse is too close to the player, don't rotate
             {
                 return;
@@ -128,6 +143,44 @@ namespace PlayerScripts
 
         
         //Player shooting
+        private void UpdateCurrentTarget()
+        {
+            if (targetDetector == null)
+            {
+                currentTarget = null;
+                RemoveCrosshair();
+                return;
+            }
+
+            targetDetector.CleanList();
+
+            EnemyScript closestEnemy = null;
+            float closestDistance = Mathf.Infinity;
+
+            for (int i = 0; i < targetDetector.EnemiesInRange.Count; i++)
+            {
+                EnemyScript enemy = targetDetector.EnemiesInRange[i];
+                float distance = Vector2.Distance(transform.position, enemy.transform.position);
+
+                if (distance < closestDistance)
+                {
+                    closestDistance = distance;
+                    closestEnemy = enemy;
+                }
+            }
+
+            currentTarget = closestEnemy;
+
+            if (currentTarget != null)
+            {
+                ShowCrosshairOnTarget();
+            }
+            else
+            {
+                RemoveCrosshair();
+            }
+        }
+        
         private void PlayerShoot()
         {
             if (isReloading || controlsLocked)
@@ -140,7 +193,26 @@ namespace PlayerScripts
                 if (ammoInClip > 0)
                 {
                     ammoInClip--;
-                    GameObject bulletObject = Instantiate(bulletPrefab, gunTip.position, gunTip.rotation);
+
+                    Quaternion bulletRotation;
+                    
+                    if (currentTarget != null)
+                    {
+                        Vector2 directionToEnemy = (currentTarget.transform.position - gunTip.position).normalized;
+                        float angle = Mathf.Atan2(directionToEnemy.y, directionToEnemy.x) * Mathf.Rad2Deg + 90f;
+                        bulletRotation = Quaternion.Euler(0f, 0f, angle);
+                    }
+                    else
+                    {
+                        Vector3 mouseWorldPosition = Camera.main.ScreenToWorldPoint(Input.mousePosition);
+                        mouseWorldPosition.z = 0f;
+                        
+                        Vector2 directionToMouse = (mouseWorldPosition - gunTip.position).normalized;
+                        float angle = Mathf.Atan2(directionToMouse.y, directionToMouse.x) * Mathf.Rad2Deg + 90f;
+                        bulletRotation = Quaternion.Euler(0f, 0f, angle);
+                    }
+                    
+                    GameObject bulletObject = Instantiate(bulletPrefab, gunTip.position, bulletRotation);
                     BulletScript bulletScript = bulletObject.GetComponent<BulletScript>();
                     bulletScript.Initialise(damage);
                 }
@@ -202,6 +274,8 @@ namespace PlayerScripts
         }
         
         
+        
+        
         //Player health
         public void PlayerTakeDamage()
         {
@@ -252,7 +326,10 @@ namespace PlayerScripts
                 return;
             }
 
-            rb.mass = 100000;   //to not allow the enemies from moving the player
+            rb.linearVelocity = Vector2.zero;
+            rb.angularVelocity = 0f;
+            rb.bodyType = RigidbodyType2D.Kinematic;
+            
             spriteRenderer.sprite = playerDeadSprite;
             LockControls();
 
@@ -263,6 +340,30 @@ namespace PlayerScripts
         {
             yield return new WaitForSeconds(3f);
             ScreenFadeManager.Instance.FadeLoadScene("DeathScene");
+        }
+        
+        //Crosshair
+        private void ShowCrosshairOnTarget()
+        {
+            if (currentTarget == null)
+            {
+                return;
+            }
+            if (currentCrosshair == null)
+            {
+                currentCrosshair = Instantiate(crosshairPrefab);
+            }
+            
+            currentCrosshair.transform.position = currentTarget.transform.position;
+        }
+
+        private void RemoveCrosshair()
+        {
+            if (currentCrosshair != null)
+            {
+                Destroy(currentCrosshair);
+                currentCrosshair = null;
+            }
         }
         
         
@@ -306,7 +407,7 @@ namespace PlayerScripts
         public void LockControls()
         {
             controlsLocked = true;
-            rb.linearVelocity = Vector3.zero;
+            rb.linearVelocity = Vector2.zero;
             isReloading = false;
         }
 
